@@ -120,73 +120,43 @@ function App() {
     await batch.commit();
   };
 
-// App.jsx 内の該当関数を差し替え
-
-const handleDeleteMaterial = async (id) => {
-  if (window.confirm("この教材を削除すると、過去の学習履歴もすべて削除されます。よろしいですか？")) {
-    // 修正：userId 指定を追加して、自分のログだけを取得する
-    const ls = await getDocs(query(
-      collection(db, "study_logs"), 
-      where("materialId", "==", id),
-      where("userId", "==", user.uid)
-    ));
-    
-    const batch = writeBatch(db);
-    ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
-    batch.delete(doc(db, "materials", id));
-    await batch.commit();
-  }
-};
-
-const handleDeleteCategory = async (cat) => {
-  if (!cat?.id) return;
-  if (window.confirm(`カテゴリ「${cat.name}」とその中の教材・全履歴、および関連する学習目標を整理しますか？`)) {
-    const batch = writeBatch(db);
-
-    // 1. 教材とログの削除（修正：userId 指定を追加）
-    const mq = query(
-      collection(db, "materials"), 
-      where("categoryId", "==", cat.id),
-      where("userId", "==", user.uid)
-    );
-    const ms = await getDocs(mq);
-    
-    for (const md of ms.docs) {
-      const ls = await getDocs(query(
-        collection(db, "study_logs"), 
-        where("materialId", "==", md.id),
-        where("userId", "==", user.uid)
-      ));
+  const handleDeleteMaterial = async (id) => {
+    if (window.confirm("この教材を削除すると、過去の学習履歴もすべて削除されます。よろしいですか？")) {
+      const ls = await getDocs(query(collection(db, "study_logs"), where("materialId", "==", id), where("userId", "==", user.uid)));
+      const batch = writeBatch(db);
       ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
-      batch.delete(doc(db, "materials", md.id));
+      batch.delete(doc(db, "materials", id));
+      await batch.commit();
     }
+  };
 
-    // 2. 学習目標 (goals) の整理（修正：userId 指定を追加）
-    const goalSnap = await getDocs(query(
-      collection(db, "goals"), 
-      where("userId", "==", user.uid)
-    ));
-    
-    goalSnap.docs.forEach(goalDoc => {
-      const goalData = goalDoc.data();
-      const ids = goalData.categoryIds || [];
-      if (ids.includes(cat.id)) {
-        if (ids.length > 1) {
-          batch.update(doc(db, "goals", goalDoc.id), { 
-            categoryIds: ids.filter(id => id !== cat.id) 
-          });
-        } else {
-          batch.delete(doc(db, "goals", goalDoc.id));
-        }
+  const handleDeleteCategory = async (cat) => {
+    if (!cat?.id) return;
+    if (window.confirm(`カテゴリ「${cat.name}」とその中の教材・全履歴、および関連する学習目標を整理しますか？`)) {
+      const batch = writeBatch(db);
+      const mq = query(collection(db, "materials"), where("categoryId", "==", cat.id), where("userId", "==", user.uid));
+      const ms = await getDocs(mq);
+      for (const md of ms.docs) {
+        const ls = await getDocs(query(collection(db, "study_logs"), where("materialId", "==", md.id), where("userId", "==", user.uid)));
+        ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
+        batch.delete(doc(db, "materials", md.id));
       }
-    });
-
-    // 3. カテゴリ自体の削除
-    batch.delete(doc(db, "categories", cat.id));
-
-    await batch.commit();
-  }
-};
+      const goalSnap = await getDocs(query(collection(db, "goals"), where("userId", "==", user.uid)));
+      goalSnap.docs.forEach(goalDoc => {
+        const goalData = goalDoc.data();
+        const ids = goalData.categoryIds || [];
+        if (ids.includes(cat.id)) {
+          if (ids.length > 1) {
+            batch.update(doc(db, "goals", goalDoc.id), { categoryIds: ids.filter(id => id !== cat.id) });
+          } else {
+            batch.delete(doc(db, "goals", goalDoc.id));
+          }
+        }
+      });
+      batch.delete(doc(db, "categories", cat.id));
+      await batch.commit();
+    }
+  };
 
   const handleDeleteLog = async (logId) => {
     if (window.confirm("この学習記録を削除しますか？")) await deleteDoc(doc(db, "study_logs", logId));
@@ -210,32 +180,22 @@ const handleDeleteCategory = async (cat) => {
         {activeTab === 'home' && <HomeView logs={logs} categories={categories} goals={goals} onAddGoal={handleAddLearningGoal} onDeleteGoal={handleDeleteGoal} onUpdateGoalStatus={handleUpdateGoalStatus} />}
         {activeTab === 'record' && (
           <RecordView 
-            categories={categories} 
-            materials={materials} 
-            activeMaterialId={activeMaterialId} 
-            isManagementMode={isManagementMode} 
-            isAddMenuOpen={isAddMenuOpen} 
-            addType={addType} 
-            seconds={seconds} 
-            isRunning={isRunning} 
-            setActiveMaterialId={setActiveMaterialId} 
-            setIsManagementMode={setIsManagementMode} 
-            setIsAddMenuOpen={setIsAddMenuOpen} 
-            setAddType={setAddType} 
-            setIsRunning={handleToggleTimer}
-            setSeconds={setSeconds} 
-            onSaveLog={handleSaveLog} 
-            onSaveManualLog={handleSaveManualLog} 
+            categories={categories} materials={materials} activeMaterialId={activeMaterialId} isManagementMode={isManagementMode} isAddMenuOpen={isAddMenuOpen} addType={addType} seconds={seconds} isRunning={isRunning} 
+            setActiveMaterialId={setActiveMaterialId} setIsManagementMode={setIsManagementMode} setIsAddMenuOpen={setIsAddMenuOpen} setAddType={setAddType} setIsRunning={handleToggleTimer} setSeconds={setSeconds} onSaveLog={handleSaveLog} onSaveManualLog={handleSaveManualLog} 
             onAddCategory={(name) => addDoc(collection(db, "categories"), { name: name.trim(), userId: user.uid, sortIndex: categories.length, status: 'active' })} 
             onAddMaterial={(name, catId) => addDoc(collection(db, "materials"), { name: name.trim(), categoryId: catId, userId: user.uid, sortIndex: materials.filter(m => m.categoryId === catId).length })}
             onUpdateCategory={(id, name, status) => updateDoc(doc(db, "categories", id), { name: name.trim(), status: status || 'active' })}
             onUpdateMaterial={(id, name) => updateDoc(doc(db, "materials", id), { name: name.trim() })}
-            onDeleteMaterial={handleDeleteMaterial} 
-            onDeleteCategory={handleDeleteCategory} 
-            onReorderUpdate={handleReorderUpdate} 
+            onDeleteMaterial={handleDeleteMaterial} onDeleteCategory={handleDeleteCategory} onReorderUpdate={handleReorderUpdate} 
           />
         )}
-        {activeTab === 'history' && <HistoryView logs={logs} categories={categories} goals={goals} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
+        {activeTab === 'history' && (
+          <HistoryView 
+            logs={logs} categories={categories} goals={goals} 
+            onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} 
+            onDeleteGoal={handleDeleteGoal} // ★追加
+          />
+        )}
         {activeTab === 'todo' && <TodoView todos={todos} onAddTodo={(text) => addDoc(collection(db, "todos"), { text: text.trim(), completed: false, userId: user.uid })} onToggleTodo={(id, completed) => updateDoc(doc(db, "todos", id), { completed })} onDeleteTodo={(id) => deleteDoc(doc(db, "todos", id))} />}
       </div>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />

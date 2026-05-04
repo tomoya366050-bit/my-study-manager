@@ -9,7 +9,7 @@ import { THEME_COLORS } from '../../../styles/theme';
 import { DateUtils } from '../../../utils/DateUtils';
 import { ValidationUtils } from '../../../utils/ValidationUtils';
 
-const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
+const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDeleteGoal }) => {
   const [expandedCatId, setExpandedCatId] = useState(null);
   const [isCompletedGoalsExpanded, setIsCompletedGoalsExpanded] = useState(false); 
   
@@ -68,19 +68,17 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
     });
   }, [categories, logs]);
 
-  // --- 3. 完了済み目標の集計（期間日数計算を追加） ---
+  // --- 3. 完了済み目標の集計 ---
   const completedGoalsStats = useMemo(() => {
     return goals
       .filter(g => g.status === 'completed')
       .map(goal => {
         const goalStartDate = safeGetDate(goal.createdAt);
         goalStartDate.setHours(0, 0, 0, 0);
-        
         const goalEndDate = goal.completedAt ? safeGetDate(goal.completedAt) : new Date();
         const displayEndDate = new Date(goalEndDate);
         displayEndDate.setHours(0, 0, 0, 0);
 
-        // 経過日数の計算 (1日未満を1日として数えるため +1)
         const diffTime = displayEndDate.getTime() - goalStartDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
@@ -93,10 +91,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
         const isSuccess = actualSec >= (goal.targetTime * 3600);
 
         return { 
-          ...goal, 
-          actualSec, 
-          isSuccess,
-          diffDays,
+          ...goal, actualSec, isSuccess, diffDays,
           periodText: `${DateUtils.formatTimestampToYMD(goal.createdAt)} 〜 ${DateUtils.formatTimestampToYMD(goalEndDate)}`
         };
       });
@@ -239,8 +234,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px', color: THEME_COLORS.text.muted }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Calendar size={12}/> 
-                          期間: {goal.periodText} ({goal.diffDays}日間)
+                          <Calendar size={12}/> 期間: {goal.periodText} ({goal.diffDays}日間)
                         </div>
                         {goal.deadline && (
                           <div style={{ paddingLeft: '16px' }}>期限: {DateUtils.formatTimestampToYMD(goal.deadline)}</div>
@@ -250,6 +244,13 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
                         </div>
                       </div>
                     </div>
+                    {/* ★追加：削除ボタン */}
+                    <Trash2 
+                      size={16} 
+                      color={THEME_COLORS.text.muted} 
+                      onClick={() => onDeleteGoal(goal.id)} 
+                      style={{ cursor: 'pointer', marginLeft: '10px', padding: '4px' }} 
+                    />
                   </div>
                 </ChicCard>
               ))}
