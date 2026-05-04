@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "dist",  // ← ここを "public" から "dist" に変更！
+    "public": "dist",
     "ignore": [
       "firebase.json",
       "**/.*",
