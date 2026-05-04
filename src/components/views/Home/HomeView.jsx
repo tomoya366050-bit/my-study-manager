@@ -48,13 +48,18 @@ const HomeView = ({ logs, categories, dailyGoalMin, onSaveGoal }) => {
   const weekTotalSec = currentWeekLogs.reduce((s, l) => s + l.duration, 0);
   const monthSec = logs.filter(l => safeGetDate(l.createdAt).getMonth() === now.getMonth()).reduce((s, l) => s + l.duration, 0);
   
-  // 円グラフのデータ
-  const pieData = categories.map((cat, index) => ({ 
+// 円グラフのデータ
+  // 1. まず今週勉強した時間だけを集計し、0時間のものを除外する
+  const activeCategories = categories.map(cat => ({ 
     name: cat.name, 
-    value: currentWeekLogs.filter(l => l.categoryId === cat.id).reduce((s, l) => s + l.duration, 0), 
-    // ★修正：チャートの色を配列から順番に取る
-    fillColor: THEME_COLORS.charts[index % THEME_COLORS.charts.length]
+    value: currentWeekLogs.filter(l => l.categoryId === cat.id).reduce((s, l) => s + l.duration, 0)
   })).filter(d => d.value > 0);
+
+  // 2. 生き残った（グラフに表示される）カテゴリに対してのみ、順番に色を割り当てる
+  const pieData = activeCategories.map((data, index) => ({
+    ...data,
+    fillColor: THEME_COLORS.charts[index % THEME_COLORS.charts.length]
+  }));
 
   // 週間平均と継続日数の計算
   const weeklyAvgMin = Math.floor((weekTotalSec / 7) / 60); 
