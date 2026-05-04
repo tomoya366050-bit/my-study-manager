@@ -6,7 +6,7 @@ import { collection, addDoc, query, where, onSnapshot, serverTimestamp, deleteDo
 import HomeView from './components/views/Home/HomeView';
 import RecordView from './components/views/Record/RecordView';
 import HistoryView from './components/views/History/HistoryView';
-import TodoView from './components/views/ToDo/ToDoView';
+import TodoView from './components/views/todos/TodoView';
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 
@@ -31,15 +31,13 @@ function App() {
   // ★追加：開始時刻をミリ秒で保持するState
   const [startTime, setStartTime] = useState(null);
 
-  const ACCENT_RED = "#c53030"; 
-
   useEffect(() => {
     const unsubAuth = onAuthStateChanged(auth, (u) => setUser(u));
     return () => unsubAuth();
   }, []);
 
   // ★初期ロード時に中断されたセッションを復元
-  useEffect(() => 　{
+  useEffect(() =>  {
     if (!user) return;
     
     const saved = TimerUtils.loadSession();
@@ -192,7 +190,7 @@ function App() {
     <div style={layoutStyles.container}>
       <div style={layoutStyles.mainContent}>
         <Header />
-        {activeTab === 'home' && <HomeView logs={filteredLogs} categories={categories} dailyGoalMin={dailyGoalMin} onSaveGoal={handleSaveGoal} ACCENT_RED={ACCENT_RED} />}
+        {activeTab === 'home' && <HomeView logs={filteredLogs} categories={categories} dailyGoalMin={dailyGoalMin} onSaveGoal={handleSaveGoal} />}
         {activeTab === 'record' && (
           <RecordView 
             categories={categories} 
@@ -203,7 +201,6 @@ function App() {
             addType={addType} 
             seconds={seconds} 
             isRunning={isRunning} 
-            ACCENT_RED={ACCENT_RED} 
             setActiveMaterialId={(id) => {
               setActiveMaterialId(id);
               // 教材を選択した時点で一旦セッションを保存（秒数は0）
@@ -226,9 +223,9 @@ function App() {
             onReorderUpdate={handleReorderUpdate} 
           />
         )}
-        {activeTab === 'history' && <HistoryView logs={filteredLogs} categories={categories} ACCENT_RED={ACCENT_RED} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
+        {activeTab === 'history' && <HistoryView logs={filteredLogs} categories={categories} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
         {activeTab === 'todo' && (
-          <TodoView todos={todos} onAddTodo={(text) => addDoc(collection(db, "todos"), { text, completed: false, userId: user.uid })} onToggleTodo={(id, completed) => updateDoc(doc(db, "todos", id), { completed })} onDeleteTodo={(id) => deleteDoc(doc(db, "todos", id))} ACCENT_RED={ACCENT_RED} />
+          <TodoView todos={todos} onAddTodo={(text) => addDoc(collection(db, "todos"), { text, completed: false, userId: user.uid })} onToggleTodo={(id, completed) => updateDoc(doc(db, "todos", id), { completed })} onDeleteTodo={(id) => deleteDoc(doc(db, "todos", id))} />
         )}
       </div>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
