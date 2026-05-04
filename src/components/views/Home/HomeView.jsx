@@ -30,7 +30,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   const todayKey = DateUtils.getDateKey(now);
   
   const safeGetDate = (timestamp) => {
-    if (!timestamp) return new Date(); // 取得直後のnull対応
+    if (!timestamp) return new Date();
     return timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   };
 
@@ -48,7 +48,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   const weekTotalSec = currentWeekLogs.reduce((s, l) => s + l.duration, 0);
   const weeklyAvgMin = Math.floor((weekTotalSec / 7) / 60); 
 
-  // --- 棒グラフデータ ---
   const weeklyData = weekRange.map(date => {
     const dKey = DateUtils.getDateKey(date);
     const daySec = currentWeekLogs.filter(l => DateUtils.getDateKey(safeGetDate(l.createdAt)) === dKey).reduce((s, l) => s + l.duration, 0);
@@ -61,7 +60,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   const ticks = [];
   for (let i = 0; i <= yAxisMax; i += (yAxisMax <= 180 ? 60 : 180)) { ticks.push(i); }
 
-  // --- 円グラフデータ ---
   const activeCategories = categories.map(cat => ({ 
     name: cat.name, 
     value: currentWeekLogs.filter(l => l.categoryId === cat.id).reduce((s, l) => s + l.duration, 0)
@@ -74,28 +72,32 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
 
   // --- 学習目標レンダリング ---
   const renderGoalCard = (goal) => {
-    // 比較対象の日時を「目標作成日の00:00:00」に設定（不具合修正の鍵）
     const goalStartDate = safeGetDate(goal.createdAt);
     goalStartDate.setHours(0, 0, 0, 0);
 
-    const goalLogs = logs.filter(log => 
-      goal.categoryIds.includes(log.categoryId) && 
-      safeGetDate(log.createdAt) >= goalStartDate
-    );
-
+    const goalLogs = logs.filter(log => goal.categoryIds.includes(log.categoryId) && safeGetDate(log.createdAt) >= goalStartDate);
     const currentSec = goalLogs.reduce((s, l) => s + l.duration, 0);
     const targetSec = goal.targetTime * 3600;
     const progressPercent = Math.min(Math.floor((currentSec / targetSec) * 100), 100);
     
     let dailyQuotaText = null;
     let daysRemaining = 0;
+    let isOverdue = false;
+    let overdueDays = 0;
+
     if (goal.deadline && goal.status === 'active') {
       daysRemaining = DateUtils.calculateDaysRemaining(goal.deadline);
-      if (daysRemaining > 0) {
+      if (daysRemaining <= 0) {
+        isOverdue = true;
+        overdueDays = 1 - daysRemaining; // 翌日を「1日経過」とする計算
+      } else {
         const remainingSec = Math.max(targetSec - currentSec, 0);
         dailyQuotaText = DateUtils.formatSecondsToHM(remainingSec / daysRemaining);
       }
     }
+
+    // 登録ボタンの表示条件: 達成率100% 以上 または 期限切れ
+    const canRegister = goal.status === 'active' && (progressPercent >= 100 || isOverdue);
 
     return (
       <ChicCard key={goal.id} style={{ marginBottom: '15px' }}>
@@ -121,7 +123,11 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div style={{ fontSize: '11px', color: THEME_COLORS.text.muted }}>
-            {goal.deadline && <div>期限: {DateUtils.formatTimestampToYMD(goal.deadline)} (残り {daysRemaining} 日)</div>}
+            {goal.deadline && (
+              <div style={{ color: isOverdue ? THEME_COLORS.accentRed : THEME_COLORS.text.muted, fontWeight: isOverdue ? 'bold' : 'normal' }}>
+                {isOverdue ? `期限を ${overdueDays} 日過ぎています` : `期限: ${DateUtils.formatTimestampToYMD(goal.deadline)} (残り ${daysRemaining} 日)`}
+              </div>
+            )}
             <div>実績: {(currentSec / 3600).toFixed(1)}h / {goal.targetTime}h</div>
           </div>
           {dailyQuotaText && (
@@ -131,8 +137,10 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
             </div>
           )}
         </div>
-        {goal.status === 'active' && progressPercent >= 100 && (
-          <ChicButton onClick={() => onUpdateGoalStatus(goal.id, 'completed')} style={{ marginTop: '15px', width: '100%', padding: '8px' }}>目標達成！完了にする</ChicButton>
+        {canRegister && (
+          <ChicButton onClick={() => onUpdateGoalStatus(goal.id, 'completed')} style={{ marginTop: '15px', width: '100%', padding: '8px' }}>
+            {progressPercent >= 100 ? "目標達成！完了にする" : "期限切れで終了（完了にする）"}
+          </ChicButton>
         )}
       </ChicCard>
     );
@@ -144,7 +152,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   return (
     <div key="home">
       <ChicTypography variant="h2">学習サマリー</ChicTypography>
-      
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', marginBottom: '25px' }}>
         <div><ChicTypography variant="label">今日</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(todayMin / 60).toFixed(1)}h</div></div>
         <div><ChicTypography variant="label">今週</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(weekTotalSec / 3600).toFixed(1)}h</div></div>
