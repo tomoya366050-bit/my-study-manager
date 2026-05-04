@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, BookOpen, Trash2, ChevronLeft, ChevronRight, Edit2, Check, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, BookOpen, Trash2, ChevronLeft, ChevronRight, Edit2, Check, X, Award } from 'lucide-react';
 import ChicCard from '../../common/ChicCard';
 import ChicTypography from '../../common/ChicTypography';
 import ChicInput from '../../common/ChicInput';
@@ -9,8 +9,9 @@ import { THEME_COLORS } from '../../../styles/theme';
 import { DateUtils } from '../../../utils/DateUtils';
 import { ValidationUtils } from '../../../utils/ValidationUtils';
 
-const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
+const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
   const [expandedCatId, setExpandedCatId] = useState(null);
+  const [isCompletedGoalsExpanded, setIsCompletedGoalsExpanded] = useState(false); // ★追加：目標用アコーディオン
   
   // カレンダー用ステート
   const [currentMonth, setCurrentMonth] = useState(DateUtils.getToday());
@@ -37,7 +38,6 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
     return daysArray;
   }, [currentMonth]);
 
-  // ★修正: DateUtils.getDateKey を使用して日付を比較
   const isSameDay = (d1, d2) => DateUtils.getDateKey(d1) === DateUtils.getDateKey(d2);
 
   const getDayTotalHours = (date) => {
@@ -70,7 +70,25 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
     });
   }, [categories, logs]);
 
-  // --- 3. 時間表示用ヘルパー (UIの装飾を維持するためJSXを返す) ---
+  // --- 3. 完了済み目標の集計 ---
+  const completedGoalsStats = useMemo(() => {
+    return goals
+      .filter(g => g.status === 'completed')
+      .map(goal => {
+        // 目標作成日（0時0分0秒）以降の該当ログを抽出
+        const goalStartDate = safeGetDate(goal.createdAt);
+        goalStartDate.setHours(0, 0, 0, 0);
+
+        const goalLogs = logs.filter(log => 
+          goal.categoryIds.includes(log.categoryId) && 
+          safeGetDate(log.createdAt) >= goalStartDate
+        );
+        const actualSec = goalLogs.reduce((s, l) => s + l.duration, 0);
+        return { ...goal, actualSec };
+      });
+  }, [goals, logs]);
+
+  // --- 4. 時間表示用ヘルパー (UIの装飾を維持するためJSXを返す) ---
   const formatTimeJSX = (totalSeconds, showDetail = false) => {
     const totalMinutes = totalSeconds / 60;
     const h = Math.floor(totalMinutes / 60);
@@ -96,20 +114,15 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
     setEditMinutes(Math.floor((log.duration % 3600) / 60).toString());
   };
 
-  // ★修正: ValidationUtils で数値の妥当性をチェック
   const handleSaveEdit = (logId) => {
     if (!ValidationUtils.isValidNumber(editHours) || !ValidationUtils.isValidNumber(editMinutes)) {
       alert("時間を正しく入力してください");
       return;
     }
-    
     const h = parseInt(editHours) || 0;
     const m = parseInt(editMinutes) || 0;
     const totalSec = (h * 3600) + (m * 60);
-    
-    if (totalSec > 0) { 
-      onUpdateLog(logId, totalSec); 
-    }
+    if (totalSec > 0) { onUpdateLog(logId, totalSec); }
     setEditingLogId(null);
   };
 
@@ -156,30 +169,16 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, fontSize: '11px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{category?.name || "未分類"}</ChicTypography>
                     <ChicTypography variant="h3" style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: THEME_COLORS.text.primary }}>{log.materialName}</ChicTypography>
-                    {/* ★修正: DateUtils.formatTimestampToYMD を使用 */}
                     <div style={{ fontSize: '10px', color: THEME_COLORS.text.muted, marginTop: '4px' }}>{DateUtils.formatTimestampToYMD(log.createdAt)}</div>
                   </div>
-
                   {isEditing ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <ChicInput 
-                          type="number" 
-                          min="0"
-                          value={editHours} 
-                          onChange={(e) => setEditHours(e.target.value)} 
-                          style={{ width: '60px', padding: '5px 8px', marginBottom: 0, fontSize: '13px', textAlign: 'left', border: `1px solid ${THEME_COLORS.surface}` }} 
-                        />
+                        <ChicInput type="number" min="0" value={editHours} onChange={(e) => setEditHours(e.target.value)} style={{ width: '60px', padding: '5px 8px', marginBottom: 0, fontSize: '13px', textAlign: 'left', border: `1px solid ${THEME_COLORS.surface}` }} />
                         <span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>h</span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <ChicInput 
-                          type="number" 
-                          min="0"
-                          value={editMinutes} 
-                          onChange={(e) => setEditMinutes(e.target.value)} 
-                          style={{ width: '60px', padding: '5px 8px', marginBottom: 0, fontSize: '13px', textAlign: 'left', border: `1px solid ${THEME_COLORS.surface}` }} 
-                        />
+                        <ChicInput type="number" min="0" value={editMinutes} onChange={(e) => setEditMinutes(e.target.value)} style={{ width: '60px', padding: '5px 8px', marginBottom: 0, fontSize: '13px', textAlign: 'left', border: `1px solid ${THEME_COLORS.surface}` }} />
                         <span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>m</span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', marginLeft: '4px' }}>
@@ -202,6 +201,42 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
           })
         )}
       </section>
+
+      {/* ★追加：完了した学習目標（カテゴリ累計の上に配置） */}
+      {completedGoalsStats.length > 0 && (
+        <section style={{ marginBottom: '40px' }}>
+          <div 
+            onClick={() => setIsCompletedGoalsExpanded(!isCompletedGoalsExpanded)}
+            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', cursor: 'pointer', marginBottom: '20px' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Award size={18} color="#4ade80" />
+              <span style={{ fontSize: '14px', fontWeight: 'bold', color: THEME_COLORS.text.secondary }}>達成済みの学習目標 ({completedGoalsStats.length})</span>
+            </div>
+            {isCompletedGoalsExpanded ? <ChevronUp size={20} color={THEME_COLORS.text.secondary}/> : <ChevronDown size={20} color={THEME_COLORS.text.secondary}/>}
+          </div>
+          
+          {isCompletedGoalsExpanded && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {completedGoalsStats.map((goal) => (
+                <ChicCard key={goal.id} padding="15px">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <ChicTypography variant="h3" style={{ margin: 0, fontSize: '15px', color: THEME_COLORS.text.primary }}>{goal.title}</ChicTypography>
+                      <div style={{ fontSize: '11px', color: THEME_COLORS.text.muted, marginTop: '4px' }}>
+                        実績: {(goal.actualSec / 3600).toFixed(1)}h / {goal.targetTime}h
+                      </div>
+                    </div>
+                    <div style={{ color: '#4ade80', fontSize: '11px', fontWeight: 'bold', border: '1px solid #4ade80', padding: '2px 8px', borderRadius: '12px' }}>
+                      COMPLETED
+                    </div>
+                  </div>
+                </ChicCard>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* 累計統計 */}
       <section style={{ marginBottom: '30px' }}>
