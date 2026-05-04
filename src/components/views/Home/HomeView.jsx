@@ -4,6 +4,8 @@ import { Target, Settings2, Plus, Calendar as CalendarIcon, Check, X, Trash2, Ch
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
+import { Timestamp } from 'firebase/firestore';
+
 import ChicCard from '../../common/ChicCard';
 import ChicButton from '../../common/ChicButton';
 import ChicInput from '../../common/ChicInput';
