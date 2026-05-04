@@ -21,7 +21,7 @@ function App() {
   const [todos, setTodos] = useState([]);
   const [goals, setGoals] = useState([]); 
   const [dailyGoalMin, setDailyGoalMin] = useState(0); 
-  const [activeTab, setActiveTab] = useState('record');
+  const [activeTab, setActiveTab] = useState('home');
   const [activeMaterialId, setActiveMaterialId] = useState(null); 
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [addType, setAddType] = useState('category'); 
@@ -106,17 +106,23 @@ function App() {
     setDailyGoalMin(val);
   };
 
-const handleUpdateGoalStatus = async (goalId, status) => {
-  const updateData = { status };
-  // statusが'completed'になる時に、その時のサーバー時刻を保存する
-  if (status === 'completed') {
-    updateData.completedAt = serverTimestamp();
-  }
-  await updateDoc(doc(db, "goals", goalId), updateData);
-};
+  // 学習目標の新規追加
+  const handleAddLearningGoal = async (goalData) => {
+    await addDoc(collection(db, "goals"), {
+      ...goalData,
+      userId: user.uid,
+      status: 'active',
+      createdAt: serverTimestamp()
+    });
+  };
 
+  // 学習目標のステータス更新 (★完了時刻を記録するように修正)
   const handleUpdateGoalStatus = async (goalId, status) => {
-    await updateDoc(doc(db, "goals", goalId), { status });
+    const updateData = { status };
+    if (status === 'completed') {
+      updateData.completedAt = serverTimestamp(); // 完了ボタンを押した時間を保存
+    }
+    await updateDoc(doc(db, "goals", goalId), updateData);
   };
 
   const handleDeleteGoal = async (goalId) => {
@@ -248,7 +254,15 @@ const handleUpdateGoalStatus = async (goalId, status) => {
             onReorderUpdate={handleReorderUpdate} 
           />
         )}
-        {activeTab === 'history' && <HistoryView logs={logs} categories={categories} goals={goals} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
+        {activeTab === 'history' && (
+          <HistoryView 
+            logs={logs} 
+            categories={categories} 
+            goals={goals} 
+            onDeleteLog={handleDeleteLog} 
+            onUpdateLog={handleUpdateLog} 
+          />
+        )}
         {activeTab === 'todo' && (
           <TodoView todos={todos} onAddTodo={(text) => {
             if (!ValidationUtils.isRequired(text)) return;
