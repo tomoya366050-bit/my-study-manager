@@ -1,19 +1,20 @@
 import React from 'react';
+import { THEME_COLORS } from '../../styles/theme';
 
 const ChicSelect = ({ value, onChange, options, placeholder, style = {} }) => {
   const selectStyle = {
     width: '100%',
     padding: '15px',
     borderRadius: '12px',
-    backgroundColor: '#0f0f0f',
-    border: '1px solid #222',
-    color: '#fff',
+    backgroundColor: THEME_COLORS.background,
+    border: `1px solid ${THEME_COLORS.surface}`,
+    color: THEME_COLORS.text.primary,
     marginBottom: '12px',
     boxSizing: 'border-box',
     outline: 'none',
     fontSize: '15px',
     cursor: 'pointer',
-    appearance: 'none', // ブラウザ標準の矢印を消してスタイリッシュにすることも可能
+    appearance: 'none', 
     ...style
   };
 
