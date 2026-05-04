@@ -19,9 +19,9 @@ function App() {
   const [materials, setMaterials] = useState([]);
   const [logs, setLogs] = useState([]);
   const [todos, setTodos] = useState([]);
-  const [goals, setGoals] = useState([]); // ★追加：学習目標用ステート
+  const [goals, setGoals] = useState([]); // 学習目標用
   const [dailyGoalMin, setDailyGoalMin] = useState(0); 
-  const [activeTab, setActiveTab] = useState('record');
+  const [activeTab, setActiveTab] = useState('home');
   const [activeMaterialId, setActiveMaterialId] = useState(null); 
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [addType, setAddType] = useState('category'); 
@@ -51,8 +51,6 @@ function App() {
     const unsubCats = onSnapshot(query(collection(db, "categories"), where("userId", "==", user.uid), orderBy("sortIndex", "asc")), (snap) => setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubMats = onSnapshot(query(collection(db, "materials"), where("userId", "==", user.uid), orderBy("sortIndex", "asc")), (snap) => setMaterials(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubTodos = onSnapshot(query(collection(db, "todos"), where("userId", "==", user.uid)), (snap) => setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-    
-    // ★追加：学習目標のリアルタイム取得
     const unsubGoals = onSnapshot(query(collection(db, "goals"), where("userId", "==", user.uid), orderBy("createdAt", "desc")), (snap) => setGoals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
     let unsubLogs = onSnapshot(
@@ -113,7 +111,7 @@ function App() {
     setDailyGoalMin(val);
   };
 
-  // ★追加：学習目標の追加
+  // 学習目標の追加
   const handleAddLearningGoal = async (goalData) => {
     await addDoc(collection(db, "goals"), {
       ...goalData,
@@ -123,12 +121,10 @@ function App() {
     });
   };
 
-  // ★追加：目標のステータス変更（完了時など）
   const handleUpdateGoalStatus = async (goalId, status) => {
     await updateDoc(doc(db, "goals", goalId), { status });
   };
 
-  // ★追加：目標の削除
   const handleDeleteGoal = async (goalId) => {
     if (window.confirm("この学習目標を削除しますか？")) {
       await deleteDoc(doc(db, "goals", goalId));
@@ -236,23 +232,13 @@ function App() {
             onSaveManualLog={handleSaveManualLog} 
             onAddCategory={(name) => {
               if (!ValidationUtils.isRequired(name)) return;
-              addDoc(collection(db, "categories"), { 
-                name: name.trim(), 
-                userId: user.uid, 
-                sortIndex: categories.length,
-                status: 'active'
-              });
+              addDoc(collection(db, "categories"), { name: name.trim(), userId: user.uid, sortIndex: categories.length, status: 'active' });
               setIsAddMenuOpen(false);
             }} 
             onAddMaterial={(name, catId) => {
               if (!ValidationUtils.isRequired(name) || !catId) return;
               const catMaterials = materials.filter(m => m.categoryId === catId); 
-              addDoc(collection(db, "materials"), { 
-                name: name.trim(), 
-                categoryId: catId, 
-                userId: user.uid, 
-                sortIndex: catMaterials.length 
-              });
+              addDoc(collection(db, "materials"), { name: name.trim(), categoryId: catId, userId: user.uid, sortIndex: catMaterials.length });
               setIsAddMenuOpen(false);
             }}
             onUpdateCategory={(id, name, status) => {
@@ -268,15 +254,7 @@ function App() {
             onReorderUpdate={handleReorderUpdate} 
           />
         )}
-        {activeTab === 'history' && (
-          <HistoryView 
-            logs={logs} 
-            categories={categories} 
-            goals={goals} // ★完了した目標表示用
-            onDeleteLog={handleDeleteLog} 
-            onUpdateLog={handleUpdateLog} 
-          />
-        )}
+        {activeTab === 'history' && <HistoryView logs={filteredLogs} categories={categories} goals={goals} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
         {activeTab === 'todo' && (
           <TodoView todos={todos} onAddTodo={(text) => {
             if (!ValidationUtils.isRequired(text)) return;
