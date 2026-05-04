@@ -68,15 +68,21 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
     });
   }, [categories, logs]);
 
-  // --- 3. 完了済み目標の集計（期間・成功失敗判定を追加） ---
+  // --- 3. 完了済み目標の集計（期間日数計算を追加） ---
   const completedGoalsStats = useMemo(() => {
     return goals
       .filter(g => g.status === 'completed')
       .map(goal => {
         const goalStartDate = safeGetDate(goal.createdAt);
         goalStartDate.setHours(0, 0, 0, 0);
-        // 完了日がない場合は便宜上現在の時刻を使用
+        
         const goalEndDate = goal.completedAt ? safeGetDate(goal.completedAt) : new Date();
+        const displayEndDate = new Date(goalEndDate);
+        displayEndDate.setHours(0, 0, 0, 0);
+
+        // 経過日数の計算 (1日未満を1日として数えるため +1)
+        const diffTime = displayEndDate.getTime() - goalStartDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
         const goalLogs = logs.filter(log => 
           goal.categoryIds.includes(log.categoryId) && 
@@ -90,6 +96,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
           ...goal, 
           actualSec, 
           isSuccess,
+          diffDays,
           periodText: `${DateUtils.formatTimestampToYMD(goal.createdAt)} 〜 ${DateUtils.formatTimestampToYMD(goalEndDate)}`
         };
       });
@@ -207,7 +214,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
         )}
       </section>
 
-      {/* 完了した学習目標（修正点） */}
+      {/* 完了した学習目標 */}
       {completedGoalsStats.length > 0 && (
         <section style={{ marginBottom: '40px' }}>
           <div onClick={() => setIsCompletedGoalsExpanded(!isCompletedGoalsExpanded)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', cursor: 'pointer', marginBottom: '20px' }}>
@@ -231,7 +238,10 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
                         </div>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px', color: THEME_COLORS.text.muted }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={12}/> 期間: {goal.periodText}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Calendar size={12}/> 
+                          期間: {goal.periodText} ({goal.diffDays}日間)
+                        </div>
                         {goal.deadline && (
                           <div style={{ paddingLeft: '16px' }}>期限: {DateUtils.formatTimestampToYMD(goal.deadline)}</div>
                         )}
