@@ -15,7 +15,6 @@ jobs:
           node-version: 20
 
       - name: Install and Build
-        working-directory: ./my-study-app
         run: |
           npm install
           npm run build
@@ -26,4 +25,3 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_APP_MYSTUDYMANAGER }}
           projectId: app-mystudymanager
           channelId: live
-          entryPoint: ./my-study-app

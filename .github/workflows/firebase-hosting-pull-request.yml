@@ -14,27 +14,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # 1. Node.js環境を整える（エラー回避のためキャッシュ設定を削除）
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 2. 必要なライブラリをインストール
-      # ※ package-lock.json が無い場合でも動くよう npm install を使用
       - name: Install dependencies
-        working-directory: ./my-study-app
         run: npm install
 
-      # 3. 本番用ファイルをビルド
       - name: Build project
-        working-directory: ./my-study-app
         run: npm run build
 
-      # 4. Firebaseにプレビュー版をデプロイ
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_APP_MYSTUDYMANAGER }}
           projectId: app-mystudymanager
-          entryPoint: ./my-study-app
