@@ -10,7 +10,6 @@ import TodoView from './components/views/ToDo/ToDoView';
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 
-// 各ユーティリティのインポート
 import { TimerUtils } from './utils/TimerUtils';
 import { ValidationUtils } from './utils/ValidationUtils';
 
@@ -20,6 +19,7 @@ function App() {
   const [materials, setMaterials] = useState([]);
   const [logs, setLogs] = useState([]);
   const [todos, setTodos] = useState([]);
+  const [goals, setGoals] = useState([]); // ★追加：学習目標用ステート
   const [dailyGoalMin, setDailyGoalMin] = useState(0); 
   const [activeTab, setActiveTab] = useState('record');
   const [activeMaterialId, setActiveMaterialId] = useState(null); 
@@ -35,7 +35,6 @@ function App() {
     return () => unsubAuth();
   }, []);
 
-  // 初期ロード時のセッション復元
   useEffect(() => {
     if (!user) return;
     
@@ -45,13 +44,16 @@ function App() {
       setSeconds(saved.seconds);
       if (saved.startTime) {
         setStartTime(saved.startTime);
-        setIsRunning(true); // ★タイポ修正: isRunning(true) -> setIsRunning(true)
+        setIsRunning(true);
       }
     }
 
     const unsubCats = onSnapshot(query(collection(db, "categories"), where("userId", "==", user.uid), orderBy("sortIndex", "asc")), (snap) => setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubMats = onSnapshot(query(collection(db, "materials"), where("userId", "==", user.uid), orderBy("sortIndex", "asc")), (snap) => setMaterials(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubTodos = onSnapshot(query(collection(db, "todos"), where("userId", "==", user.uid)), (snap) => setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    
+    // ★追加：学習目標のリアルタイム取得
+    const unsubGoals = onSnapshot(query(collection(db, "goals"), where("userId", "==", user.uid), orderBy("createdAt", "desc")), (snap) => setGoals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
     let unsubLogs = onSnapshot(
       query(collection(db, "study_logs"), where("userId", "==", user.uid), orderBy("createdAt", "desc")),
@@ -70,10 +72,9 @@ function App() {
     };
     fetchGoal();
 
-    return () => { unsubCats(); unsubMats(); unsubTodos(); unsubLogs(); };
+    return () => { unsubCats(); unsubMats(); unsubTodos(); unsubLogs(); unsubGoals(); };
   }, [user]);
 
-  // タイマー更新（差分計算方式を維持）
   useEffect(() => {
     let interval = null;
     if (isRunning && startTime) {
@@ -110,6 +111,28 @@ function App() {
     const val = parseInt(min) || 0;
     await setDoc(doc(db, "user_settings", user.uid), { dailyGoalMin: val }, { merge: true });
     setDailyGoalMin(val);
+  };
+
+  // ★追加：学習目標の追加
+  const handleAddLearningGoal = async (goalData) => {
+    await addDoc(collection(db, "goals"), {
+      ...goalData,
+      userId: user.uid,
+      status: 'active',
+      createdAt: serverTimestamp()
+    });
+  };
+
+  // ★追加：目標のステータス変更（完了時など）
+  const handleUpdateGoalStatus = async (goalId, status) => {
+    await updateDoc(doc(db, "goals", goalId), { status });
+  };
+
+  // ★追加：目標の削除
+  const handleDeleteGoal = async (goalId) => {
+    if (window.confirm("この学習目標を削除しますか？")) {
+      await deleteDoc(doc(db, "goals", goalId));
+    }
   };
 
   const handleSaveLog = async (material) => {
@@ -177,7 +200,18 @@ function App() {
     <div style={layoutStyles.container}>
       <div style={layoutStyles.mainContent}>
         <Header />
-        {activeTab === 'home' && <HomeView logs={filteredLogs} categories={categories} dailyGoalMin={dailyGoalMin} onSaveGoal={handleSaveGoal} />}
+        {activeTab === 'home' && (
+          <HomeView 
+            logs={logs} 
+            categories={categories} 
+            goals={goals} 
+            onAddGoal={handleAddLearningGoal} 
+            onDeleteGoal={handleDeleteGoal}
+            onUpdateGoalStatus={handleUpdateGoalStatus}
+            dailyGoalMin={dailyGoalMin} 
+            onSaveGoal={handleSaveGoal} 
+          />
+        )}
         {activeTab === 'record' && (
           <RecordView 
             categories={categories} 
@@ -201,7 +235,6 @@ function App() {
             onSaveLog={handleSaveLog} 
             onSaveManualLog={handleSaveManualLog} 
             onAddCategory={(name) => {
-              // ValidationUtils を適用
               if (!ValidationUtils.isRequired(name)) return;
               addDoc(collection(db, "categories"), { 
                 name: name.trim(), 
@@ -212,7 +245,6 @@ function App() {
               setIsAddMenuOpen(false);
             }} 
             onAddMaterial={(name, catId) => {
-              // ValidationUtils を適用
               if (!ValidationUtils.isRequired(name) || !catId) return;
               const catMaterials = materials.filter(m => m.categoryId === catId); 
               addDoc(collection(db, "materials"), { 
@@ -224,12 +256,10 @@ function App() {
               setIsAddMenuOpen(false);
             }}
             onUpdateCategory={(id, name, status) => {
-              // ValidationUtils を適用
               if (!ValidationUtils.isRequired(name)) return;
               updateDoc(doc(db, "categories", id), { name: name.trim(), status: status || 'active' });
             }}
             onUpdateMaterial={(id, name) => {
-              // ValidationUtils を適用
               if (!ValidationUtils.isRequired(name)) return;
               updateDoc(doc(db, "materials", id), { name: name.trim() });
             }}
@@ -238,11 +268,18 @@ function App() {
             onReorderUpdate={handleReorderUpdate} 
           />
         )}
-        {activeTab === 'history' && <HistoryView logs={filteredLogs} categories={categories} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
+        {activeTab === 'history' && (
+          <HistoryView 
+            logs={logs} 
+            categories={categories} 
+            goals={goals} // ★完了した目標表示用
+            onDeleteLog={handleDeleteLog} 
+            onUpdateLog={handleUpdateLog} 
+          />
+        )}
         {activeTab === 'todo' && (
           <TodoView todos={todos} onAddTodo={(text) => {
-            // ToDoの空文字ガード
-            if(!ValidationUtils.isRequired(text)) return;
+            if (!ValidationUtils.isRequired(text)) return;
             addDoc(collection(db, "todos"), { text: text.trim(), completed: false, userId: user.uid });
           }} onToggleTodo={(id, completed) => updateDoc(doc(db, "todos", id), { completed })} onDeleteTodo={(id) => deleteDoc(doc(db, "todos", id))} />
         )}

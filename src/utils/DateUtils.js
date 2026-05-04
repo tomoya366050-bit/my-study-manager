@@ -43,7 +43,7 @@ export const DateUtils = {
     return `${y}/${m}/${d}`;
   },
 
-  // 継続日数の計算ロジック (HomeViewなどで使用)
+  // 継続日数の計算ロジック
   calculateStreak: (logs) => {
     if (!logs || logs.length === 0) return 0;
     
@@ -75,5 +75,31 @@ export const DateUtils = {
       checkKey = `${checkDate.getFullYear()}-${checkDate.getMonth() + 1}-${checkDate.getDate()}`;
     }
     return streak;
+  }, // <--- ここにカンマが必要でした！
+
+  /**
+   * 期限までの残り日数を計算する (今日を含む)
+   * @param {Date|Timestamp} deadline 
+   * @returns {number} 残り日数 (期限が今日なら1、切れていれば0以下)
+   */
+  calculateDaysRemaining: (deadline) => {
+    if (!deadline) return 0;
+    const end = deadline.toDate ? deadline.deadline.toDate() : new Date(deadline);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    
+    const diffTime = end.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
+  },
+
+  /**
+   * 秒数を「〇時間〇分」の形式に変換する
+   */
+  formatSecondsToHM: (totalSeconds) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    return `${h}時間${m}分`;
   }
 };
