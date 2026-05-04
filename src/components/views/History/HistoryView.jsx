@@ -94,7 +94,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
     const m = parseInt(editMinutes || 0);
     const totalSec = (h * 3600) + (m * 60);
     
-    // ★修正: 0分以下での修正登録をブロック（エラーを出して編集モードを抜けない）
     if (totalSec <= 0) {
       alert("学習時間は1分以上で入力してください");
       return;
@@ -106,6 +105,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
 
   return (
     <div style={{ width: '100%', boxSizing: 'border-box' }}>
+      {/* カレンダーセクション */}
       <section style={{ marginBottom: '40px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: THEME_COLORS.text.primary, cursor: 'pointer' }}><ChevronLeft size={24} /></button>
@@ -114,20 +114,65 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
           {DateUtils.weekLabels.map((day, i) => (<div key={day} style={{ textAlign: 'center', fontSize: '12px', color: i === 0 ? THEME_COLORS.accentRed : THEME_COLORS.text.secondary, fontWeight: 'bold' }}>{day}</div>))}
+          
           {calendarDays.map((date, index) => {
             if (!date) return <div key={`empty-${index}`} />;
+            
             const isSelected = isSameDay(date, selectedDate);
-            const hours = getDayTotalHours(date);
+            const isToday = isSameDay(date, DateUtils.getToday());
+            const hoursStr = getDayTotalHours(date);
+            const hours = parseFloat(hoursStr);
+
+            // ★段階的なカラーリング（ヒートマップ）の計算
+            let bgColor = THEME_COLORS.background;
+            if (isSelected) {
+              bgColor = THEME_COLORS.accentRed;
+            } else if (hours > 0) {
+              if (hours > 6) bgColor = `${THEME_COLORS.accentRed}CC`; // 80%不透明
+              else if (hours > 3) bgColor = `${THEME_COLORS.accentRed}99`; // 60%不透明
+              else if (hours > 1) bgColor = `${THEME_COLORS.accentRed}66`; // 40%不透明
+              else bgColor = `${THEME_COLORS.accentRed}33`; // 20%不透明
+            } else if (isToday) {
+              bgColor = THEME_COLORS.surface;
+            }
+
             return (
-              <div key={index} onClick={() => setSelectedDate(date)} style={{ backgroundColor: isSelected ? THEME_COLORS.accentRed : (isSameDay(date, DateUtils.getToday()) ? THEME_COLORS.surface : THEME_COLORS.background), border: `1px solid ${isSelected ? THEME_COLORS.accentRed : THEME_COLORS.surface}`, borderRadius: '8px', padding: '8px 0', textAlign: 'center', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <div style={{ fontSize: '14px', fontWeight: 'bold', color: isSelected || isSameDay(date, DateUtils.getToday()) ? THEME_COLORS.text.primary : THEME_COLORS.text.secondary }}>{date.getDate()}</div>
-                <div style={{ fontSize: '10px', color: isSelected ? '#fff' : (hours > 0 ? THEME_COLORS.text.primary : THEME_COLORS.text.muted) }}>{hours}h</div>
+              <div 
+                key={index} 
+                onClick={() => setSelectedDate(date)} 
+                style={{ 
+                  backgroundColor: bgColor, 
+                  border: `1px solid ${isSelected ? THEME_COLORS.accentRed : THEME_COLORS.surface}`, 
+                  borderRadius: '8px', 
+                  padding: '8px 0', 
+                  textAlign: 'center', 
+                  cursor: 'pointer', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '2px',
+                  transition: 'background-color 0.2s ease'
+                }}
+              >
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 'bold', 
+                  color: (isSelected || hours > 3 || isToday) ? THEME_COLORS.text.primary : THEME_COLORS.text.secondary 
+                }}>
+                  {date.getDate()}
+                </div>
+                <div style={{ 
+                  fontSize: '10px', 
+                  color: (isSelected || hours > 3) ? '#FFFFFF' : (hours > 0 ? THEME_COLORS.text.primary : THEME_COLORS.text.muted) 
+                }}>
+                  {hoursStr}h
+                </div>
               </div>
             );
           })}
         </div>
       </section>
 
+      {/* 選択日の記録セクション */}
       <section style={{ marginBottom: '50px' }}>
         <ChicTypography variant="caption" style={{ display: 'block', marginBottom: '15px', color: THEME_COLORS.text.secondary, borderBottom: `1px solid ${THEME_COLORS.surface}`, paddingBottom: '5px' }}>{selectedDate.toLocaleDateString('ja-JP')} の記録</ChicTypography>
         {selectedDateLogs.length === 0 ? (<div style={{ textAlign: 'center', color: THEME_COLORS.text.muted, padding: '20px 0' }}>記録がありません</div>) : (
@@ -144,7 +189,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
                   </div>
                   {isEditing ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {/* ★修正: min="0" を設定し、ハイフン入力をreplaceで排除 */}
                       <ChicInput type="number" min="0" value={editHours} onChange={(e) => setEditHours(e.target.value.replace(/-/g, ''))} style={{ width: '45px', padding: '5px' }} /><span>h</span>
                       <ChicInput type="number" min="0" value={editMinutes} onChange={(e) => setEditMinutes(e.target.value.replace(/-/g, ''))} style={{ width: '45px', padding: '5px' }} /><span>m</span>
                       <Check size={20} color="#4ade80" onClick={() => handleSaveEdit(log.id)} style={{ cursor: 'pointer' }} /><X size={20} color="#f87171" onClick={() => setEditingLogId(null)} style={{ cursor: 'pointer' }} />
@@ -162,6 +206,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
         )}
       </section>
 
+      {/* 完了した学習目標セクション */}
       {completedGoalsStats.length > 0 && (
         <section style={{ marginBottom: '40px' }}>
           <div onClick={() => setIsCompletedGoalsExpanded(!isCompletedGoalsExpanded)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', cursor: 'pointer', marginBottom: '20px' }}>
@@ -196,6 +241,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
         </section>
       )}
 
+      {/* カテゴリ別累計セクション */}
       <section style={{ marginBottom: '30px' }}>
         <ChicTypography variant="h2" style={{ textAlign: 'center', marginBottom: '20px', color: THEME_COLORS.text.primary }}>カテゴリ別 累計</ChicTypography>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
