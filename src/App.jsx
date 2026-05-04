@@ -218,9 +218,15 @@ function App() {
               setIsAddMenuOpen(false);
             }}
             onUpdateCategory={(id, name, status) => {
+              // ★修正：空文字ガード
+              if (!name.trim()) return;
               updateDoc(doc(db, "categories", id), { name: name.trim(), status: status || 'active' });
             }}
-            onUpdateMaterial={(id, name) => updateDoc(doc(db, "materials", id), { name })} 
+            onUpdateMaterial={(id, name) => {
+              // ★修正：空文字ガード
+              if (!name.trim()) return;
+              updateDoc(doc(db, "materials", id), { name: name.trim() });
+            }}
             onDeleteMaterial={handleDeleteMaterial} 
             onDeleteCategory={handleDeleteCategory} 
             onReorderUpdate={handleReorderUpdate} 

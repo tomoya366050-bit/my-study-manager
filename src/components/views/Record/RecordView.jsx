@@ -70,7 +70,6 @@ const RecordView = ({
     }
   };
 
-  // --- カテゴリセクションの描画（インラインステータス変更対応） ---
   const renderCategorySection = (cat) => {
     const isCompleted = cat.status === 'completed';
     return (
@@ -80,7 +79,6 @@ const RecordView = ({
             <Bookmark size={18} fill={isCompleted ? THEME_COLORS.text.muted : THEME_COLORS.accentRed} color={isCompleted ? THEME_COLORS.text.muted : THEME_COLORS.accentRed} style={{ flexShrink: 0 }} />
             <ChicTypography variant="h3" style={{ color: isCompleted ? THEME_COLORS.text.secondary : THEME_COLORS.text.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</ChicTypography>
             
-            {/* ★新機能: 編集モード中のみ表示されるクイックステータス切替ボタン */}
             {isManagementMode && (
               <button 
                 onClick={() => onUpdateCategory(cat.id, cat.name, isCompleted ? 'active' : 'completed')}
@@ -127,7 +125,19 @@ const RecordView = ({
                         {editingMaterialId === mat.id ? (
                           <div style={{marginTop: '8px'}}>
                             <ChicInput value={editingMaterialName} onChange={e => setEditingMaterialName(e.target.value)} style={{ padding: '5px', fontSize: '11px' }} autoFocus />
-                            <div style={{display:'flex', gap:'3px'}}><ChicButton onClick={() => { onUpdateMaterial(mat.id, editingMaterialName); setEditingMaterialId(null); }} style={{ padding:'4px' }}><Check size={12}/></ChicButton><ChicButton variant="cancel" onClick={() => setEditingMaterialId(null)} style={{ padding:'4px' }}><X size={12}/></ChicButton></div>
+                            <div style={{display:'flex', gap:'3px'}}>
+                              <ChicButton onClick={() => { 
+                                // ★修正：教材名のインライン編集時の空文字ガード
+                                if (!editingMaterialName.trim()) return;
+                                onUpdateMaterial(mat.id, editingMaterialName); 
+                                setEditingMaterialId(null); 
+                              }} style={{ padding:'4px' }}>
+                                <Check size={12}/>
+                              </ChicButton>
+                              <ChicButton variant="cancel" onClick={() => setEditingMaterialId(null)} style={{ padding:'4px' }}>
+                                <X size={12}/>
+                              </ChicButton>
+                            </div>
                           </div>
                         ) : <p style={{ fontSize: '11px', color: isCompleted ? THEME_COLORS.text.muted : THEME_COLORS.text.secondary, marginTop: '8px', textAlign: 'center' }}>{mat.name}</p>}
                       </div>
@@ -150,7 +160,6 @@ const RecordView = ({
 
   return (
     <div key="record-list">
-      {/* ヘッダー */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <ChicTypography variant="h2" style={{ marginBottom: 0, fontWeight: 'bold', color: THEME_COLORS.text.primary }}>
           {reorderMode !== 'none' ? '並べ替え中' : isManagementMode ? 'リスト編集中' : '記録する'}
@@ -181,7 +190,6 @@ const RecordView = ({
         </div>
       </div>
 
-      {/* カテゴリ並べ替え（既存） */}
       {reorderMode === 'category' && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 2000, padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
           <div style={{ width: '100%', maxWidth: '400px' }}>
@@ -213,7 +221,6 @@ const RecordView = ({
         </div>
       )}
 
-      {/* 追加メニュー（既存） */}
       {isAddMenuOpen && (
         <ChicCard padding="10px">
           <div style={{ display: 'flex', backgroundColor: THEME_COLORS.surface, borderRadius: '12px', padding: '4px', marginBottom: '20px' }}>
@@ -247,7 +254,6 @@ const RecordView = ({
         </ChicCard>
       )}
 
-      {/* リスト表示 */}
       <DragDropContext onDragEnd={onDragEnd}>
         {activeCategories.length === 0 && completedCategories.length === 0 ? (
            <ChicTypography variant="body" style={{ textAlign: 'center', marginTop: '40px', color: THEME_COLORS.text.muted }}>右上の＋ボタンから追加してください</ChicTypography>
@@ -269,7 +275,6 @@ const RecordView = ({
         )}
       </DragDropContext>
 
-      {/* 名前変更用ポップアップ（ステータス変更はインライン化したため、名前変更のみに集中） */}
       {editingCategory && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 3000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
           <ChicCard style={{ width: '100%', maxWidth: '350px' }}>
@@ -279,6 +284,7 @@ const RecordView = ({
             
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <ChicButton onClick={() => { 
+                // ★修正：カテゴリ名の編集（ポップアップ）時の空文字ガード
                 if (!editingCategory.name.trim()) return;
                 onUpdateCategory(editingCategory.id, editingCategory.name, editingCategory.status); 
                 setEditingCategory(null); 
