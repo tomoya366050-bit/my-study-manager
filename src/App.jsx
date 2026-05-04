@@ -160,17 +160,46 @@ function App() {
     }
   };
 
+ // App.jsx 内の handleDeleteCategory 関数を以下に差し替え
+
   const handleDeleteCategory = async (cat) => {
-    if (window.confirm(`カテゴリ「${cat.name}」とその中の教材・全履歴を削除しますか？`)) {
+    if (window.confirm(`カテゴリ「${cat.name}」とその中の教材・全履歴、および関連する学習目標を整理しますか？`)) {
+      const batch = writeBatch(db);
+
+      // 1. カテゴリに紐づく教材とログを削除
       const mq = query(collection(db, "materials"), where("categoryId", "==", cat.id));
       const ms = await getDocs(mq);
-      const batch = writeBatch(db);
+      
       for (const md of ms.docs) {
         const ls = await getDocs(query(collection(db, "study_logs"), where("materialId", "==", md.id)));
         ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
         batch.delete(doc(db, "materials", md.id));
       }
+
+      // 2. 学習目標 (goals) の整理ロジック
+      // すべての目標を取得してチェック
+      const goalSnap = await getDocs(query(collection(db, "goals"), where("userId", "==", user.uid)));
+      
+      goalSnap.docs.forEach(goalDoc => {
+        const goalData = goalDoc.data();
+        const ids = goalData.categoryIds || [];
+
+        if (ids.includes(cat.id)) {
+          if (ids.length > 1) {
+            // 他にカテゴリがある場合は、削除対象のみ除外して更新
+            batch.update(doc(db, "goals", goalDoc.id), {
+              categoryIds: ids.filter(id => id !== cat.id)
+            });
+          } else {
+            // そのカテゴリしかない場合は、学習目標自体を削除
+            batch.delete(doc(db, "goals", goalDoc.id));
+          }
+        }
+      });
+
+      // 3. カテゴリ自体の削除
       batch.delete(doc(db, "categories", cat.id));
+
       await batch.commit();
     }
   };

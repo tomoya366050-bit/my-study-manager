@@ -15,7 +15,6 @@ import { DateUtils } from '../../../utils/DateUtils';
 import { ValidationUtils } from '../../../utils/ValidationUtils';
 
 const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGoalStatus }) => {
-  // 学習目標（複数）追加用のステートのみ維持
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalTargetTime, setNewGoalTargetTime] = useState(""); 
@@ -70,6 +69,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
     const goalStartDate = safeGetDate(goal.createdAt);
     goalStartDate.setHours(0, 0, 0, 0);
 
+    // カテゴリが削除されて logs から消えていても、この filter で正しく現在の合計が算出されます
     const goalLogs = logs.filter(log => goal.categoryIds.includes(log.categoryId) && safeGetDate(log.createdAt) >= goalStartDate);
     const currentSec = goalLogs.reduce((s, l) => s + l.duration, 0);
     const targetSec = goal.targetTime * 3600;
@@ -99,11 +99,15 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
           <div>
             <ChicTypography variant="h3" style={{ margin: 0, color: THEME_COLORS.text.primary }}>{goal.title}</ChicTypography>
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
-              {goal.categoryIds.map(id => (
-                <span key={id} style={{ fontSize: '10px', color: THEME_COLORS.text.muted, backgroundColor: THEME_COLORS.surface, padding: '2px 6px', borderRadius: '4px' }}>
-                  {categories.find(c => c.id === id)?.name || "不明"}
-                </span>
-              ))}
+              {/* 削除されたカテゴリは categories.find で見つからないため、自動的に表示から消えます */}
+              {goal.categoryIds.map(id => {
+                const cat = categories.find(c => c.id === id);
+                return cat ? (
+                  <span key={id} style={{ fontSize: '10px', color: THEME_COLORS.text.muted, backgroundColor: THEME_COLORS.surface, padding: '2px 6px', borderRadius: '4px' }}>
+                    {cat.name}
+                  </span>
+                ) : null;
+              })}
             </div>
           </div>
           <Trash2 size={16} color={THEME_COLORS.text.muted} onClick={() => onDeleteGoal(goal.id)} style={{ cursor: 'pointer' }} />
