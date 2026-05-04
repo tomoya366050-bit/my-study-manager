@@ -120,18 +120,26 @@ function App() {
     }
   };
 
+  // ★修正：カテゴリ削除時に、そのカテゴリIDを持つ全ログを直接削除する強力なロジック
   const handleDeleteCategory = async (cat) => {
     if (!cat?.id) return;
-    if (window.confirm(`カテゴリ「${cat.name}」に関連する全データを削除しますか？`)) {
+    if (window.confirm(`カテゴリ「${cat.name}」に関連する教材・全履歴、および学習目標を完全に削除しますか？`)) {
       const batch = writeBatch(db);
+
+      // 1. 教材の削除
       const mq = query(collection(db, "materials"), where("categoryId", "==", cat.id), where("userId", "==", user.uid));
       const ms = await getDocs(mq);
-      for (const md of ms.docs) {
+      ms.docs.forEach(md => {
         if (activeMaterialId === md.id) resetTimerState();
-        const ls = await getDocs(query(collection(db, "study_logs"), where("materialId", "==", md.id), where("userId", "==", user.uid)));
-        ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
         batch.delete(doc(db, "materials", md.id));
-      }
+      });
+
+      // 2. 学習履歴の「直接」一括削除（重要：教材経由ではなくカテゴリIDで検索）
+      const lq = query(collection(db, "study_logs"), where("categoryId", "==", cat.id), where("userId", "==", user.uid));
+      const ls = await getDocs(lq);
+      ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
+
+      // 3. 学習目標の整理
       const goalSnap = await getDocs(query(collection(db, "goals"), where("userId", "==", user.uid)));
       goalSnap.docs.forEach(goalDoc => {
         const ids = goalDoc.data().categoryIds || [];
@@ -140,7 +148,10 @@ function App() {
           else batch.delete(doc(db, "goals", goalDoc.id));
         }
       });
+
+      // 4. カテゴリ自体の削除
       batch.delete(doc(db, "categories", cat.id));
+
       await batch.commit();
     }
   };
@@ -162,7 +173,6 @@ function App() {
             categories={categories} materials={materials} activeMaterialId={activeMaterialId} isManagementMode={isManagementMode} isAddMenuOpen={isAddMenuOpen} addType={addType} seconds={seconds} isRunning={isRunning} 
             setActiveMaterialId={(id) => {
               if (id) {
-                // ★教材選択時に必ずリセット
                 setActiveMaterialId(id); setSeconds(0); setStartTime(null); setIsRunning(false);
                 TimerUtils.saveSession(null, id, 0);
               } else { resetTimerState(); }
