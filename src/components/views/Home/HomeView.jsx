@@ -29,7 +29,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
     return timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
   };
 
-  // --- 学習統計計算 ---
   const todaySec = logs.filter(l => DateUtils.getDateKey(safeGetDate(l.createdAt)) === todayKey).reduce((s, l) => s + l.duration, 0);
   const todayMin = Math.floor(todaySec / 60);
 
@@ -65,7 +64,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
     fillColor: THEME_COLORS.charts[index % THEME_COLORS.charts.length]
   }));
 
-  // --- 学習目標レンダリング ---
   const renderGoalCard = (goal) => {
     const goalStartDate = safeGetDate(goal.createdAt);
     goalStartDate.setHours(0, 0, 0, 0);
@@ -99,7 +97,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
           <div>
             <ChicTypography variant="h3" style={{ margin: 0, color: THEME_COLORS.text.primary }}>{goal.title}</ChicTypography>
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
-              {/* ★修正箇所：現在存在するカテゴリリストと照合し、削除済みは表示しない */}
               {goal.categoryIds.map(id => {
                 const foundCategory = categories.find(c => c.id === id);
                 if (!foundCategory) return null;
@@ -230,7 +227,14 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
           <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
             <div style={{ flex: 1 }}>
               <ChicTypography variant="label">目標時間 (h)</ChicTypography>
-              <ChicInput type="number" value={newGoalTargetTime} onChange={e => setNewGoalTargetTime(e.target.value)} placeholder="100" />
+              {/* ★修正: min="1" を設定し、ハイフン入力をreplaceで排除 */}
+              <ChicInput 
+                type="number" 
+                min="1" 
+                value={newGoalTargetTime} 
+                onChange={e => setNewGoalTargetTime(e.target.value.replace(/-/g, ''))} 
+                placeholder="100" 
+              />
             </div>
             <div style={{ flex: 1 }}>
               <ChicTypography variant="label">期限 (任意)</ChicTypography>
@@ -251,11 +255,13 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <ChicButton onClick={() => {
-              if (!ValidationUtils.isRequired(newGoalTitle) || !newGoalTargetTime || selectedCategoryIds.length === 0) {
-                alert("タイトル、時間、カテゴリは必須項目です");
+              const targetTime = parseInt(newGoalTargetTime);
+              // ★修正: targetTime が 0 以下の場合のガードを追加
+              if (!ValidationUtils.isRequired(newGoalTitle) || !targetTime || targetTime <= 0 || selectedCategoryIds.length === 0) {
+                alert("タイトル、目標時間（1時間以上）、該当カテゴリは必須項目です");
                 return;
               }
-              onAddGoal({ title: newGoalTitle, targetTime: parseInt(newGoalTargetTime), deadline: newGoalDeadline ? Timestamp.fromDate(newGoalDeadline) : null, categoryIds: selectedCategoryIds });
+              onAddGoal({ title: newGoalTitle, targetTime, deadline: newGoalDeadline ? Timestamp.fromDate(newGoalDeadline) : null, categoryIds: selectedCategoryIds });
               setIsAddingGoal(false);
               setNewGoalTitle(""); setNewGoalTargetTime(""); setNewGoalDeadline(null); setSelectedCategoryIds([]);
             }} style={{ flex: 1 }}><Check size={18}/> 目標を作成</ChicButton>

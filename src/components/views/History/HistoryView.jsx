@@ -33,7 +33,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
 
   const getDayTotalHours = (date) => {
     if (!date) return 0;
-    // 存在するカテゴリのログのみを集計
     const dayLogs = logs.filter(l => isSameDay(safeGetDate(l.createdAt), date) && categories.some(c => c.id === l.categoryId));
     const totalSec = dayLogs.reduce((acc, curr) => acc + curr.duration, 0);
     return (totalSec / 3600).toFixed(1);
@@ -59,7 +58,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
     });
   }, [categories, logs]);
 
-  // ★学習目標の履歴表示ロジック（スナップショット対応）
   const completedGoalsStats = useMemo(() => {
     return goals.filter(g => g.status === 'completed').map(goal => {
       const start = safeGetDate(goal.createdAt);
@@ -68,7 +66,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
       const eDate = new Date(end).setHours(0,0,0,0);
       const diffDays = Math.floor((eDate - sDate) / (1000 * 60 * 60 * 24)) + 1;
 
-      // 保存された実績時間があればそれを使用し、なければ0とする（外部のlogsに依存させない）
       const actualSec = goal.finalActualSec !== undefined ? goal.finalActualSec : 0;
       const displayCatNames = goal.categoryNames || [];
 
@@ -91,15 +88,24 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
   };
 
   const startEdit = (log) => { setEditingLogId(log.id); setEditHours(Math.floor(log.duration / 3600).toString()); setEditMinutes(Math.floor((log.duration % 3600) / 60).toString()); };
+  
   const handleSaveEdit = (logId) => {
-    const h = parseInt(editHours || 0); const m = parseInt(editMinutes || 0);
-    if (h >= 0 && m >= 0) onUpdateLog(logId, (h * 3600) + (m * 60));
+    const h = parseInt(editHours || 0); 
+    const m = parseInt(editMinutes || 0);
+    const totalSec = (h * 3600) + (m * 60);
+    
+    // ★修正: 0分以下での修正登録をブロック（エラーを出して編集モードを抜けない）
+    if (totalSec <= 0) {
+      alert("学習時間は1分以上で入力してください");
+      return;
+    }
+    
+    onUpdateLog(logId, totalSec);
     setEditingLogId(null);
   };
 
   return (
     <div style={{ width: '100%', boxSizing: 'border-box' }}>
-      {/* カレンダーセクション */}
       <section style={{ marginBottom: '40px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: THEME_COLORS.text.primary, cursor: 'pointer' }}><ChevronLeft size={24} /></button>
@@ -122,7 +128,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
         </div>
       </section>
 
-      {/* 選択日の記録セクション */}
       <section style={{ marginBottom: '50px' }}>
         <ChicTypography variant="caption" style={{ display: 'block', marginBottom: '15px', color: THEME_COLORS.text.secondary, borderBottom: `1px solid ${THEME_COLORS.surface}`, paddingBottom: '5px' }}>{selectedDate.toLocaleDateString('ja-JP')} の記録</ChicTypography>
         {selectedDateLogs.length === 0 ? (<div style={{ textAlign: 'center', color: THEME_COLORS.text.muted, padding: '20px 0' }}>記録がありません</div>) : (
@@ -139,8 +144,9 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
                   </div>
                   {isEditing ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <ChicInput type="number" min="0" value={editHours} onChange={(e) => setEditHours(e.target.value)} style={{ width: '45px', padding: '5px' }} /><span>h</span>
-                      <ChicInput type="number" min="0" value={editMinutes} onChange={(e) => setEditMinutes(e.target.value)} style={{ width: '45px', padding: '5px' }} /><span>m</span>
+                      {/* ★修正: min="0" を設定し、ハイフン入力をreplaceで排除 */}
+                      <ChicInput type="number" min="0" value={editHours} onChange={(e) => setEditHours(e.target.value.replace(/-/g, ''))} style={{ width: '45px', padding: '5px' }} /><span>h</span>
+                      <ChicInput type="number" min="0" value={editMinutes} onChange={(e) => setEditMinutes(e.target.value.replace(/-/g, ''))} style={{ width: '45px', padding: '5px' }} /><span>m</span>
                       <Check size={20} color="#4ade80" onClick={() => handleSaveEdit(log.id)} style={{ cursor: 'pointer' }} /><X size={20} color="#f87171" onClick={() => setEditingLogId(null)} style={{ cursor: 'pointer' }} />
                     </div>
                   ) : (
@@ -156,7 +162,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
         )}
       </section>
 
-      {/* 完了した学習目標セクション */}
       {completedGoalsStats.length > 0 && (
         <section style={{ marginBottom: '40px' }}>
           <div onClick={() => setIsCompletedGoalsExpanded(!isCompletedGoalsExpanded)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', cursor: 'pointer', marginBottom: '20px' }}>
@@ -191,7 +196,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
         </section>
       )}
 
-      {/* カテゴリ別累計セクション */}
       <section style={{ marginBottom: '30px' }}>
         <ChicTypography variant="h2" style={{ textAlign: 'center', marginBottom: '20px', color: THEME_COLORS.text.primary }}>カテゴリ別 累計</ChicTypography>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

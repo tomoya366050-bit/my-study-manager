@@ -37,7 +37,6 @@ const RecordView = ({
   const [manualMinutes, setManualMinutes] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // ★修正：タイマー画面から戻る際の処理（App.jsxのresetロジックを呼ぶ）
   const handleBackWithConfirmation = () => {
     if (seconds > 0) {
       if (window.confirm("現在の勉強記録を保存せずに破棄してよろしいですか？")) {
@@ -49,7 +48,7 @@ const RecordView = ({
   };
 
   const exitTimer = () => {
-    setActiveMaterialId(null); // App.jsx 側の wrapper で setIsRunning(false) などが呼ばれる
+    setActiveMaterialId(null); 
     setErrorMessage("");
   };
 
@@ -88,7 +87,7 @@ const RecordView = ({
             {isManagementMode && (
               <button 
                 onClick={(e) => {
-                  e.stopPropagation(); // ★追加：親のクリックを阻止
+                  e.stopPropagation(); 
                   onUpdateCategory(cat.id, cat.name, isCompleted ? 'active' : 'completed');
                 }}
                 style={{ 
@@ -105,12 +104,12 @@ const RecordView = ({
           {isManagementMode && (
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexShrink: 0 }}>
               <Edit2 size={16} color={THEME_COLORS.text.secondary} onClick={(e) => { 
-                e.stopPropagation(); // ★追加：親のクリックを阻止
+                e.stopPropagation(); 
                 setEditingCategory({ id: cat.id, name: cat.name, status: cat.status || 'active' }); 
                 setCategoryErrorMessage(""); 
               }} style={{cursor: 'pointer'}} />
               <Trash2 size={16} color={THEME_COLORS.text.secondary} onClick={(e) => { 
-                e.stopPropagation(); // ★追加：親のクリックを阻止
+                e.stopPropagation(); 
                 onDeleteCategory(cat); 
               }} style={{cursor: 'pointer'}} />
             </div>
@@ -135,12 +134,12 @@ const RecordView = ({
                           {isManagementMode && editingMaterialId !== mat.id && (
                             <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', borderRadius: '8px' }}>
                               <Edit2 size={18} color="#fff" onClick={(e) => { 
-                                e.stopPropagation(); // ★重要：親要素の setActiveMaterialId を阻止
+                                e.stopPropagation(); 
                                 setEditingMaterialId(mat.id); 
                                 setEditingMaterialName(mat.name); 
                               }} style={{ cursor: 'pointer' }} />
                               <Trash2 size={18} color={THEME_COLORS.accentRed} onClick={(e) => { 
-                                e.stopPropagation(); // ★重要：親要素の setActiveMaterialId を阻止
+                                e.stopPropagation(); 
                                 onDeleteMaterial(mat.id); 
                               }} style={{ cursor: 'pointer' }} />
                             </div>
@@ -213,13 +212,21 @@ const RecordView = ({
           <ChicCard padding="20px">
             <DatePicker selected={manualDate} onChange={(date) => setManualDate(date)} maxDate={new Date()} locale="ja" dateFormat="yyyy/MM/dd" customInput={<ChicInput style={{ marginBottom: 0 }} />} popperPlacement="top-start" />
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', margin: '20px 0' }}>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}><ChicInput type="number" placeholder="0" value={manualHours} onChange={e => setManualHours(e.target.value)} style={{ marginBottom: 0 }} /><span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>時</span></div>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}><ChicInput type="number" placeholder="0" value={manualMinutes} onChange={e => setManualMinutes(e.target.value)} style={{ marginBottom: 0 }} /><span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>分</span></div>
+              {/* ★修正: min="0" を設定し、ハイフン入力をreplaceで排除 */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ChicInput type="number" min="0" placeholder="0" value={manualHours} onChange={e => setManualHours(e.target.value.replace(/-/g, ''))} style={{ marginBottom: 0 }} />
+                <span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>時</span>
+              </div>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ChicInput type="number" min="0" placeholder="0" value={manualMinutes} onChange={e => setManualMinutes(e.target.value.replace(/-/g, ''))} style={{ marginBottom: 0 }} />
+                <span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>分</span>
+              </div>
             </div>
             {errorMessage && <p style={{ color: THEME_COLORS.accentRed, fontSize: '12px', marginBottom: '15px', textAlign: 'center' }}>{errorMessage}</p>}
             <ChicButton onClick={() => {
               const h = parseInt(manualHours) || 0; const m = parseInt(manualMinutes) || 0; const totalSec = (h * 3600) + (m * 60);
-              if (totalSec <= 0 || totalSec > 86400) { setErrorMessage("時間を正しく入力してください"); return; }
+              // ★修正: 0分以下での登録をブロック
+              if (totalSec <= 0 || totalSec > 86400) { setErrorMessage("学習時間は1分以上で入力してください"); return; }
               onSaveManualLog(material, manualDate, totalSec); setManualHours(""); setManualMinutes(""); setErrorMessage("");
             }} style={{ width: '100%' }}>手動記録を保存</ChicButton>
           </ChicCard>
