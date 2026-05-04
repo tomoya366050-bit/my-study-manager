@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, PieChart, Pie, CartesianGrid } from 'recharts';
-import { Plus, Check, X, Trash2 } from 'lucide-react';
+import { Plus, Check, X, Trash2, Calendar, Target } from 'lucide-react';
 import DatePicker, { registerLocale } from "react-datepicker";
 import ja from 'date-fns/locale/ja';
 import "react-datepicker/dist/react-datepicker.css";
@@ -95,16 +95,16 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
     const canRegister = goal.status === 'active' && (progressPercent >= 100 || isOverdue);
 
     return (
-      <ChicCard key={goal.id} style={{ marginBottom: '15px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+      <ChicCard key={goal.id} style={{ marginBottom: '15px' }} padding="16px">
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
           <div>
-            <ChicTypography variant="h3" style={{ margin: 0, color: THEME_COLORS.text.primary }}>{goal.title}</ChicTypography>
+            <ChicTypography variant="h3" style={{ margin: 0, color: THEME_COLORS.text.primary, fontSize: '16px' }}>{goal.title}</ChicTypography>
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
               {goal.categoryIds.map(id => {
                 const foundCategory = categories.find(c => c.id === id);
                 if (!foundCategory) return null;
                 return (
-                  <span key={id} style={{ fontSize: '10px', color: THEME_COLORS.text.muted, backgroundColor: THEME_COLORS.surface, padding: '2px 8px', borderRadius: '4px' }}>
+                  <span key={id} style={{ fontSize: '9px', color: THEME_COLORS.text.muted, backgroundColor: THEME_COLORS.surface, padding: '1px 6px', borderRadius: '3px' }}>
                     {foundCategory.name}
                   </span>
                 );
@@ -113,31 +113,71 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
           </div>
           <Trash2 size={16} color={THEME_COLORS.text.muted} onClick={() => onDeleteGoal(goal.id)} style={{ cursor: 'pointer' }} />
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px' }}>
-          <span style={{ color: THEME_COLORS.text.secondary }}>達成度</span>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '6px' }}>
+          <span style={{ color: THEME_COLORS.text.secondary }}>進行状況</span>
           <span style={{ color: THEME_COLORS.accentRed, fontWeight: 'bold' }}>{progressPercent}%</span>
         </div>
-        <div style={{ width: '100%', height: '6px', backgroundColor: THEME_COLORS.surface, borderRadius: '3px', overflow: 'hidden', marginBottom: '12px' }}>
+        <div style={{ width: '100%', height: '5px', backgroundColor: THEME_COLORS.surface, borderRadius: '2.5px', overflow: 'hidden', marginBottom: '16px' }}>
           <div style={{ width: `${progressPercent}%`, height: '100%', backgroundColor: THEME_COLORS.accentRed, transition: 'width 1s ease' }} />
         </div>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div style={{ fontSize: '11px', color: THEME_COLORS.text.muted }}>
-            {goal.deadline && (
-              <div style={{ color: isOverdue ? THEME_COLORS.accentRed : THEME_COLORS.text.muted, fontWeight: isOverdue ? 'bold' : 'normal' }}>
-                {isOverdue ? `期限を ${overdueDays} 日過ぎています` : `期限: ${DateUtils.formatTimestampToYMD(goal.deadline)} (残り ${daysRemaining} 日)`}
+          {/* --- 左側の強調: 期限がある場合は期限情報を強調 --- */}
+          <div style={{ flex: 1 }}>
+            {goal.deadline ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{ fontSize: '10px', color: THEME_COLORS.text.secondary, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Calendar size={10} /> 期限まで
+                </div>
+                <div style={{ color: isOverdue ? THEME_COLORS.accentRed : THEME_COLORS.text.primary, fontWeight: 'bold', fontSize: '15px' }}>
+                  {isOverdue ? (
+                    `期限切れ (${overdueDays}日超過)`
+                  ) : (
+                    <>{daysRemaining}<span style={{ fontSize: '11px', marginLeft: '2px', fontWeight: 'normal', color: THEME_COLORS.text.secondary }}>日</span></>
+                  )}
+                </div>
+                <div style={{ fontSize: '9px', color: THEME_COLORS.text.muted }}>
+                  {DateUtils.formatTimestampToYMD(goal.deadline)} まで
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{ fontSize: '10px', color: THEME_COLORS.text.secondary, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Target size={10} /> 期限なし
+                </div>
+                <div style={{ fontSize: '12px', color: THEME_COLORS.text.muted, marginTop: '4px' }}>
+                  自分のペースで継続中
+                </div>
               </div>
             )}
-            <div>実績: {(currentSec / 3600).toFixed(1)}h / {goal.targetTime}h</div>
           </div>
-          {dailyQuotaText && (
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '10px', color: THEME_COLORS.text.secondary }}>1日あたりのノルマ</div>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', color: THEME_COLORS.text.primary }}>{dailyQuotaText}</div>
-            </div>
-          )}
+
+          {/* --- 右側の強調: 期限がある場合はノルマ、ない場合は実績を強調 --- */}
+          <div style={{ textAlign: 'right' }}>
+            {goal.deadline ? (
+              <>
+                <div style={{ fontSize: '10px', color: THEME_COLORS.text.secondary }}>1日のノルマ</div>
+                <div style={{ fontSize: '15px', fontWeight: 'bold', color: THEME_COLORS.text.primary }}>
+                  {dailyQuotaText || "-"}
+                </div>
+                <div style={{ fontSize: '9px', color: THEME_COLORS.text.muted, marginTop: '2px' }}>
+                  累計実績: {(currentSec / 3600).toFixed(1)}h / {goal.targetTime}h
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: '10px', color: THEME_COLORS.text.secondary }}>現在の累計実績</div>
+                <div style={{ fontSize: '18px', fontWeight: 'bold', color: THEME_COLORS.accentRed }}>
+                  {(currentSec / 3600).toFixed(1)}<span style={{ fontSize: '11px', color: THEME_COLORS.text.muted, fontWeight: 'normal', marginLeft: '3px' }}>/ {goal.targetTime}h</span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
+
         {canRegister && (
-          <ChicButton onClick={() => onUpdateGoalStatus(goal.id, 'completed')} style={{ marginTop: '15px', width: '100%', padding: '8px' }}>
+          <ChicButton onClick={() => onUpdateGoalStatus(goal.id, 'completed')} style={{ marginTop: '16px', width: '100%', padding: '10px', fontSize: '13px' }}>
             {progressPercent >= 100 ? "目標達成！完了にする" : "期限切れで終了（完了にする）"}
           </ChicButton>
         )}
@@ -156,10 +196,8 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         }
       `}</style>
 
-      {/* ★修正: 余白を削減 */}
       <ChicTypography variant="h2" style={{ marginBottom: '15px' }}>学習サマリー</ChicTypography>
 
-      {/* ★修正: 3つの数値を1つのカードにまとめて洗練させる */}
       <ChicCard padding="12px" style={{ marginBottom: '12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center' }}>
           <div>
@@ -177,7 +215,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         </div>
       </ChicCard>
 
-      {/* ★修正: グラフのカード高さを210pxに縮小し、余白を削る */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
         <ChicCard style={{ flex: 1.6, height: '210px' }} padding="12px">
           <ChicTypography variant="caption" style={{ marginBottom: '10px', display: 'block', color: THEME_COLORS.text.secondary }}>週間推移 (日〜土)</ChicTypography>
@@ -221,7 +258,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         </ChicCard>
       </div>
 
-      {/* ★修正: 平均・日数のカードの余白を詰める */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
         <ChicCard padding="12px" style={{ textAlign: 'center', backgroundColor: THEME_COLORS.background }}>
           <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '4px' }}>今週の平均/日</ChicTypography>
@@ -238,7 +274,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         </ChicCard>
       </div>
 
-      {/* ★修正: 区切り線の上下余白を半減 */}
       <hr style={{ border: 'none', borderTop: `1px solid ${THEME_COLORS.surface}`, margin: '20px 0' }} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
