@@ -228,7 +228,6 @@ const RecordView = ({
               locale="ja" 
               dateFormat="yyyy/MM/dd" 
               fixedHeight
-              {/* ★修正: 右端に合わせる設定を追加 */}
               popperPlacement="bottom-end" 
               customInput={<ChicInput style={{ marginBottom: 0 }} readOnly inputMode="none" />} 
             />
