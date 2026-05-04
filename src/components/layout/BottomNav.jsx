@@ -1,6 +1,9 @@
 import React from 'react';
 import { Home, Timer, History, ListTodo } from 'lucide-react';
 
+// ★追加：テーマカラーのインポート
+import { THEME_COLORS } from '../../styles/theme';
+
 const BottomNav = ({ activeTab, setActiveTab }) => {
   const navStyles = {
     container: {
@@ -10,7 +13,8 @@ const BottomNav = ({ activeTab, setActiveTab }) => {
       right: 0,
       backgroundColor: 'rgba(0,0,0,0.95)',
       backdropFilter: 'blur(10px)',
-      borderTop: '1px solid #111',
+      // ★修正：ボーダー色をテーマのsurfaceに統一
+      borderTop: `1px solid ${THEME_COLORS.surface}`,
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
@@ -22,7 +26,8 @@ const BottomNav = ({ activeTab, setActiveTab }) => {
       flexDirection: 'column',
       alignItems: 'center',
       gap: '5px',
-      color: isActive ? '#fff' : '#444',
+      // ★修正：アクティブ時はprimary（白系）、非アクティブ時はsecondary（明るいグレー）にして視認性UP
+      color: isActive ? THEME_COLORS.text.primary : THEME_COLORS.text.secondary,
       cursor: 'pointer',
       transition: '0.3s',
       flex: 1
