@@ -20,7 +20,6 @@ function App() {
   const [logs, setLogs] = useState([]);
   const [todos, setTodos] = useState([]);
   const [goals, setGoals] = useState([]); 
-  const [dailyGoalMin, setDailyGoalMin] = useState(0); 
   const [activeTab, setActiveTab] = useState('home');
   const [activeMaterialId, setActiveMaterialId] = useState(null); 
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
@@ -86,7 +85,7 @@ function App() {
       start.setHours(0, 0, 0, 0);
       const goalLogs = logs.filter(l => goal.categoryIds.includes(l.categoryId) && (l.createdAt.toDate ? l.createdAt.toDate() : new Date(l.createdAt)) >= start);
       const finalActualSec = goalLogs.reduce((s, l) => s + l.duration, 0);
-      const categoryNames = goal.categoryIds.map(id => categories.find(c => c.id === id)?.name || "不明").filter(n => n !== "不明");
+      const categoryNames = goal.categoryIds.map(id => categories.find(c => c.id === id)?.name || "削除済みカテゴリ").filter(n => n);
 
       await updateDoc(doc(db, "goals", goalId), {
         status: 'completed',
@@ -100,7 +99,6 @@ function App() {
   };
 
   const handleDeleteGoal = async (goalId) => {
-    // ★修正：削除前の確認ダイアログを追加
     if (window.confirm("この学習目標（履歴）を完全に削除しますか？")) {
       await deleteDoc(doc(db, "goals", goalId));
     }
@@ -141,26 +139,45 @@ function App() {
 
   const handleDeleteCategory = async (cat) => {
     if (!cat?.id) return;
-    if (window.confirm(`カテゴリ「${cat.name}」に関連する教材・全履歴を削除しますか？\n（完了済みの目標履歴は保持されます）`)) {
+    if (window.confirm(`カテゴリ「${cat.name}」に関連する教材・全履歴を削除しますか？\n（進行中の目標は整理されますが、完了済みの履歴は保持されます）`)) {
       const batch = writeBatch(db);
+
+      // 1. 教材の削除
       const ms = await getDocs(query(collection(db, "materials"), where("categoryId", "==", cat.id), where("userId", "==", user.uid)));
       ms.docs.forEach(md => {
         if (activeMaterialId === md.id) resetTimerState();
         batch.delete(doc(db, "materials", md.id));
       });
+
+      // 2. 学習履歴の削除
       const ls = await getDocs(query(collection(db, "study_logs"), where("categoryId", "==", cat.id), where("userId", "==", user.uid)));
       ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
 
-      // activeな目標のみ連鎖削除/更新の対象にする
-      const activeGoalSnap = await getDocs(query(collection(db, "goals"), where("userId", "==", user.uid), where("status", "==", "active")));
-      activeGoalSnap.docs.forEach(goalDoc => {
-        const ids = goalDoc.data().categoryIds || [];
-        if (ids.includes(cat.id)) {
-          if (ids.length > 1) batch.update(doc(db, "goals", goalDoc.id), { categoryIds: ids.filter(id => id !== cat.id) });
-          else batch.delete(doc(db, "goals", goalDoc.id));
+      // 3. 学習目標の整理 (★activeなものだけを対象にする)
+      // 複合クエリのインデックスエラーを避けるため、全目標を取得してからフィルタリング
+      const allGoalSnap = await getDocs(query(collection(db, "goals"), where("userId", "==", user.uid)));
+      
+      allGoalSnap.docs.forEach(goalDoc => {
+        const goalData = goalDoc.data();
+        // 進行中の目標のみカテゴリの連鎖削除・更新を行う
+        if (goalData.status === 'active') {
+          const ids = goalData.categoryIds || [];
+          if (ids.includes(cat.id)) {
+            if (ids.length > 1) {
+              batch.update(doc(db, "goals", goalDoc.id), { 
+                categoryIds: ids.filter(id => id !== cat.id) 
+              });
+            } else {
+              batch.delete(doc(db, "goals", goalDoc.id));
+            }
+          }
         }
+        // completed（完了済み）の目標は何もしない（スナップショットを維持）
       });
+
+      // 4. カテゴリ自体の削除
       batch.delete(doc(db, "categories", cat.id));
+
       await batch.commit();
     }
   };
