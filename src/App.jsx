@@ -215,8 +215,12 @@ function App() {
             onSaveLog={handleSaveLog} 
             onSaveManualLog={handleSaveManualLog} 
             onAddCategory={(name) => addDoc(collection(db, "categories"), { name: name.trim(), userId: user.uid, sortIndex: categories.length })} 
-            onUpdateCategory={(id, name) => updateDoc(doc(db, "categories", id), { name })} 
-            onAddMaterial={(name, catId) => { const catMaterials = materials.filter(m => m.categoryId === catId); addDoc(collection(db, "materials"), { name: name.trim(), categoryId: catId, userId: user.uid, sortIndex: catMaterials.length }); }} 
+            onAddCategory={(name) => addDoc(collection(db, "categories"), { 
+              name: name.trim(), 
+              userId: user.uid, 
+              sortIndex: categories.length,
+              status: 'active' // ★ここを追加
+            })}            
             onUpdateMaterial={(id, name) => updateDoc(doc(db, "materials", id), { name })} 
             onDeleteMaterial={handleDeleteMaterial} 
             onDeleteCategory={handleDeleteCategory} 
