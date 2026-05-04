@@ -20,7 +20,6 @@ function App() {
   const [logs, setLogs] = useState([]);
   const [todos, setTodos] = useState([]);
   const [goals, setGoals] = useState([]); 
-  const [dailyGoalMin, setDailyGoalMin] = useState(0); 
   const [activeTab, setActiveTab] = useState('home');
   const [activeMaterialId, setActiveMaterialId] = useState(null); 
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
@@ -41,10 +40,7 @@ function App() {
     if (saved.activeId) {
       setActiveMaterialId(saved.activeId);
       setSeconds(saved.seconds);
-      if (saved.startTime) {
-        setStartTime(saved.startTime);
-        setIsRunning(true);
-      }
+      if (saved.startTime) { setStartTime(saved.startTime); setIsRunning(true); }
     }
     const unsubCats = onSnapshot(query(collection(db, "categories"), where("userId", "==", user.uid), orderBy("sortIndex", "asc")), (snap) => setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubMats = onSnapshot(query(collection(db, "materials"), where("userId", "==", user.uid), orderBy("sortIndex", "asc")), (snap) => setMaterials(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
@@ -62,29 +58,19 @@ function App() {
         setSeconds(elapsed);
         TimerUtils.saveSession(startTime, activeMaterialId, elapsed);
       }, 1000);
-    } else {
-      clearInterval(interval);
-    }
+    } else { clearInterval(interval); }
     return () => clearInterval(interval);
   }, [isRunning, startTime, activeMaterialId]);
 
   const handleToggleTimer = () => {
     if (!isRunning) {
       const newStart = Date.now() - (seconds * 1000);
-      setStartTime(newStart);
-      setIsRunning(true);
+      setStartTime(newStart); setIsRunning(true);
       TimerUtils.saveSession(newStart, activeMaterialId, seconds);
     } else {
-      setIsRunning(false);
-      setStartTime(null);
+      setIsRunning(false); setStartTime(null);
       TimerUtils.saveSession(null, activeMaterialId, seconds);
     }
-  };
-
-  const handleSaveGoal = async (min) => {
-    const val = parseInt(min) || 0;
-    await setDoc(doc(db, "user_settings", user.uid), { dailyGoalMin: val }, { merge: true });
-    setDailyGoalMin(val);
   };
 
   const handleAddLearningGoal = async (goalData) => {
@@ -103,15 +89,18 @@ function App() {
 
   const handleSaveLog = async (material) => {
     await addDoc(collection(db, "study_logs"), { userId: user.uid, materialId: material.id, materialName: material.name, categoryId: material.categoryId, duration: seconds, createdAt: serverTimestamp() });
-    TimerUtils.clearSession();
-    setActiveMaterialId(null); setSeconds(0); setStartTime(null); setIsRunning(false); setActiveTab('home');
+    resetTimerState(); setActiveTab('home');
   };
 
   const handleSaveManualLog = async (material, selectedDate, durationSeconds) => {
-    const date = new Date(selectedDate);
-    date.setHours(0, 0, 1, 0); 
+    const date = new Date(selectedDate); date.setHours(0, 0, 1, 0); 
     await addDoc(collection(db, "study_logs"), { userId: user.uid, materialId: material.id, materialName: material.name, categoryId: material.categoryId, duration: durationSeconds, createdAt: Timestamp.fromDate(date) });
-    setActiveMaterialId(null); setActiveTab('home');
+    resetTimerState(); setActiveTab('home');
+  };
+
+  const resetTimerState = () => {
+    TimerUtils.clearSession();
+    setActiveMaterialId(null); setSeconds(0); setStartTime(null); setIsRunning(false);
   };
 
   const handleReorderUpdate = async (collectionName, reorderedItems) => {
@@ -121,7 +110,8 @@ function App() {
   };
 
   const handleDeleteMaterial = async (id) => {
-    if (window.confirm("この教材を削除すると、過去の学習履歴もすべて削除されます。よろしいですか？")) {
+    if (window.confirm("教材と履歴をすべて削除しますか？")) {
+      if (activeMaterialId === id) resetTimerState();
       const ls = await getDocs(query(collection(db, "study_logs"), where("materialId", "==", id), where("userId", "==", user.uid)));
       const batch = writeBatch(db);
       ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
@@ -132,25 +122,22 @@ function App() {
 
   const handleDeleteCategory = async (cat) => {
     if (!cat?.id) return;
-    if (window.confirm(`カテゴリ「${cat.name}」とその中の教材・全履歴、および関連する学習目標を整理しますか？`)) {
+    if (window.confirm(`カテゴリ「${cat.name}」に関連する全データを削除しますか？`)) {
       const batch = writeBatch(db);
       const mq = query(collection(db, "materials"), where("categoryId", "==", cat.id), where("userId", "==", user.uid));
       const ms = await getDocs(mq);
       for (const md of ms.docs) {
+        if (activeMaterialId === md.id) resetTimerState();
         const ls = await getDocs(query(collection(db, "study_logs"), where("materialId", "==", md.id), where("userId", "==", user.uid)));
         ls.docs.forEach(l => batch.delete(doc(db, "study_logs", l.id)));
         batch.delete(doc(db, "materials", md.id));
       }
       const goalSnap = await getDocs(query(collection(db, "goals"), where("userId", "==", user.uid)));
       goalSnap.docs.forEach(goalDoc => {
-        const goalData = goalDoc.data();
-        const ids = goalData.categoryIds || [];
+        const ids = goalDoc.data().categoryIds || [];
         if (ids.includes(cat.id)) {
-          if (ids.length > 1) {
-            batch.update(doc(db, "goals", goalDoc.id), { categoryIds: ids.filter(id => id !== cat.id) });
-          } else {
-            batch.delete(doc(db, "goals", goalDoc.id));
-          }
+          if (ids.length > 1) batch.update(doc(db, "goals", goalDoc.id), { categoryIds: ids.filter(id => id !== cat.id) });
+          else batch.delete(doc(db, "goals", goalDoc.id));
         }
       });
       batch.delete(doc(db, "categories", cat.id));
@@ -158,20 +145,12 @@ function App() {
     }
   };
 
-  const handleDeleteLog = async (logId) => {
-    if (window.confirm("この学習記録を削除しますか？")) await deleteDoc(doc(db, "study_logs", logId));
-  };
+  const handleDeleteLog = async (logId) => { if (window.confirm("削除しますか？")) await deleteDoc(doc(db, "study_logs", logId)); };
+  const handleUpdateLog = async (logId, newDurationSeconds) => { await updateDoc(doc(db, "study_logs", logId), { duration: newDurationSeconds }); };
 
-  const handleUpdateLog = async (logId, newDurationSeconds) => {
-    await updateDoc(doc(db, "study_logs", logId), { duration: newDurationSeconds });
-  };
+  const layoutStyles = { container: { backgroundColor: '#000', minHeight: '100vh', width: '100%', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center' }, mainContent: { width: '100%', maxWidth: '500px', padding: '20px', paddingBottom: '140px', boxSizing: 'border-box' } };
 
-  const layoutStyles = {
-    container: { backgroundColor: '#000', minHeight: '100vh', width: '100%', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center' },
-    mainContent: { width: '100%', maxWidth: '500px', padding: '20px', paddingBottom: '140px', boxSizing: 'border-box' }
-  };
-
-  if (!user) return <div style={layoutStyles.container}><button onClick={() => signInWithPopup(auth, provider)} style={{marginTop: '40vh'}}>Login with Google</button></div>;
+  if (!user) return <div style={layoutStyles.container}><button onClick={() => signInWithPopup(auth, provider)} style={{marginTop: '40vh'}}>Login</button></div>;
 
   return (
     <div style={layoutStyles.container}>
@@ -181,7 +160,15 @@ function App() {
         {activeTab === 'record' && (
           <RecordView 
             categories={categories} materials={materials} activeMaterialId={activeMaterialId} isManagementMode={isManagementMode} isAddMenuOpen={isAddMenuOpen} addType={addType} seconds={seconds} isRunning={isRunning} 
-            setActiveMaterialId={setActiveMaterialId} setIsManagementMode={setIsManagementMode} setIsAddMenuOpen={setIsAddMenuOpen} setAddType={setAddType} setIsRunning={handleToggleTimer} setSeconds={setSeconds} onSaveLog={handleSaveLog} onSaveManualLog={handleSaveManualLog} 
+            setActiveMaterialId={(id) => {
+              if (id) {
+                // ★教材選択時に必ずリセット
+                setActiveMaterialId(id); setSeconds(0); setStartTime(null); setIsRunning(false);
+                TimerUtils.saveSession(null, id, 0);
+              } else { resetTimerState(); }
+            }} 
+            setIsManagementMode={setIsManagementMode} setIsAddMenuOpen={setIsAddMenuOpen} setAddType={setAddType} 
+            setIsRunning={handleToggleTimer} setSeconds={setSeconds} onSaveLog={handleSaveLog} onSaveManualLog={handleSaveManualLog} 
             onAddCategory={(name) => addDoc(collection(db, "categories"), { name: name.trim(), userId: user.uid, sortIndex: categories.length, status: 'active' })} 
             onAddMaterial={(name, catId) => addDoc(collection(db, "materials"), { name: name.trim(), categoryId: catId, userId: user.uid, sortIndex: materials.filter(m => m.categoryId === catId).length })}
             onUpdateCategory={(id, name, status) => updateDoc(doc(db, "categories", id), { name: name.trim(), status: status || 'active' })}
@@ -189,13 +176,7 @@ function App() {
             onDeleteMaterial={handleDeleteMaterial} onDeleteCategory={handleDeleteCategory} onReorderUpdate={handleReorderUpdate} 
           />
         )}
-        {activeTab === 'history' && (
-          <HistoryView 
-            logs={logs} categories={categories} goals={goals} 
-            onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} 
-            onDeleteGoal={handleDeleteGoal} // ★追加
-          />
-        )}
+        {activeTab === 'history' && <HistoryView logs={logs} categories={categories} goals={goals} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} onDeleteGoal={handleDeleteGoal} />}
         {activeTab === 'todo' && <TodoView todos={todos} onAddTodo={(text) => addDoc(collection(db, "todos"), { text: text.trim(), completed: false, userId: user.uid })} onToggleTodo={(id, completed) => updateDoc(doc(db, "todos", id), { completed })} onDeleteTodo={(id) => deleteDoc(doc(db, "todos", id))} />}
       </div>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />

@@ -31,11 +31,13 @@ const RecordView = ({
   const [isEditMenuOpen, setIsEditMenuOpen] = useState(false);
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
   const [categoryErrorMessage, setCategoryErrorMessage] = useState("");
+
   const [manualDate, setManualDate] = useState(new Date()); 
   const [manualHours, setManualHours] = useState("");
   const [manualMinutes, setManualMinutes] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
+  // ★修正：タイマー画面から戻る際の処理（App.jsxのresetロジックを呼ぶ）
   const handleBackWithConfirmation = () => {
     if (seconds > 0) {
       if (window.confirm("現在の勉強記録を保存せずに破棄してよろしいですか？")) {
@@ -47,9 +49,7 @@ const RecordView = ({
   };
 
   const exitTimer = () => {
-    setActiveMaterialId(null);
-    setSeconds(0);
-    setIsRunning(false);
+    setActiveMaterialId(null); // App.jsx 側の wrapper で setIsRunning(false) などが呼ばれる
     setErrorMessage("");
   };
 
@@ -88,7 +88,7 @@ const RecordView = ({
             {isManagementMode && (
               <button 
                 onClick={(e) => {
-                  e.stopPropagation(); // バブリング防止
+                  e.stopPropagation(); // ★追加：親のクリックを阻止
                   onUpdateCategory(cat.id, cat.name, isCompleted ? 'active' : 'completed');
                 }}
                 style={{ 
@@ -97,7 +97,7 @@ const RecordView = ({
                   color: isCompleted ? '#4ade80' : THEME_COLORS.text.secondary
                 }}
               >
-                {isCompleted ? <><RotateCcw size={12}/> 学習中に戻す</> : <><CheckCircle2 size={12}/> 完了にする</>}
+                {isCompleted ? <><RotateCcw size={12}/> 戻す</> : <><CheckCircle2 size={12}/> 完了</>}
               </button>
             )}
           </div>
@@ -105,12 +105,12 @@ const RecordView = ({
           {isManagementMode && (
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexShrink: 0 }}>
               <Edit2 size={16} color={THEME_COLORS.text.secondary} onClick={(e) => { 
-                e.stopPropagation();
+                e.stopPropagation(); // ★追加：親のクリックを阻止
                 setEditingCategory({ id: cat.id, name: cat.name, status: cat.status || 'active' }); 
                 setCategoryErrorMessage(""); 
               }} style={{cursor: 'pointer'}} />
               <Trash2 size={16} color={THEME_COLORS.text.secondary} onClick={(e) => { 
-                e.stopPropagation();
+                e.stopPropagation(); // ★追加：親のクリックを阻止
                 onDeleteCategory(cat); 
               }} style={{cursor: 'pointer'}} />
             </div>
@@ -135,12 +135,12 @@ const RecordView = ({
                           {isManagementMode && editingMaterialId !== mat.id && (
                             <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', borderRadius: '8px' }}>
                               <Edit2 size={18} color="#fff" onClick={(e) => { 
-                                e.stopPropagation(); // 親の onClick を阻止
+                                e.stopPropagation(); // ★重要：親要素の setActiveMaterialId を阻止
                                 setEditingMaterialId(mat.id); 
                                 setEditingMaterialName(mat.name); 
                               }} style={{ cursor: 'pointer' }} />
                               <Trash2 size={18} color={THEME_COLORS.accentRed} onClick={(e) => { 
-                                e.stopPropagation(); // 親の onClick を阻止
+                                e.stopPropagation(); // ★重要：親要素の setActiveMaterialId を阻止
                                 onDeleteMaterial(mat.id); 
                               }} style={{ cursor: 'pointer' }} />
                             </div>
@@ -205,11 +205,11 @@ const RecordView = ({
           {DateUtils.formatSecondsToHMS(seconds)}
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', marginBottom: '60px' }}>
-          <button onClick={() => setIsRunning(!isRunning)} style={{ width: '80px', height: '80px', borderRadius: '50%', border: `1px solid ${THEME_COLORS.surface}`, backgroundColor: isRunning ? THEME_COLORS.surface : THEME_COLORS.accentRed, color: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{isRunning ? <Pause size={30}/> : <Play size={30}/>}</button>
+          <button onClick={() => setIsRunning()} style={{ width: '80px', height: '80px', borderRadius: '50%', border: `1px solid ${THEME_COLORS.surface}`, backgroundColor: isRunning ? THEME_COLORS.surface : THEME_COLORS.accentRed, color: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{isRunning ? <Pause size={30}/> : <Play size={30}/>}</button>
           <button onClick={() => onSaveLog(material)} style={{ width: '80px', height: '80px', borderRadius: '50%', border: `1px solid ${THEME_COLORS.surface}`, backgroundColor: THEME_COLORS.background, color: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Save size={30}/></button>
         </div>
         <div style={{ borderTop: `1px solid ${THEME_COLORS.surface}`, paddingTop: '30px' }}>
-          <ChicTypography variant="h3" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: THEME_COLORS.text.primary }}><CalendarIcon size={14}/> 手動で記録を追加</ChicTypography>
+          <ChicTypography variant="h3" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: THEME_COLORS.text.primary }}><CalendarIcon size={14}/> 手動で追加</ChicTypography>
           <ChicCard padding="20px">
             <DatePicker selected={manualDate} onChange={(date) => setManualDate(date)} maxDate={new Date()} locale="ja" dateFormat="yyyy/MM/dd" customInput={<ChicInput style={{ marginBottom: 0 }} />} popperPlacement="top-start" />
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', margin: '20px 0' }}>
@@ -243,18 +243,11 @@ const RecordView = ({
             {isEditMenuOpen && (
               <ChicCard style={{ position: 'absolute', top: '35px', right: 0, zIndex: 100, width: '220px', border: `1px solid ${THEME_COLORS.surface}` }} padding="8px">
                 <button onClick={() => { setIsManagementMode(!isManagementMode); setReorderMode('none'); setIsEditMenuOpen(false); }} style={{ width: '100%', padding: '12px', background: 'none', border: 'none', color: isManagementMode ? THEME_COLORS.accentRed : THEME_COLORS.text.primary, textAlign: 'left', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', backgroundColor: isManagementMode ? `${THEME_COLORS.accentRed}1A` : 'transparent' }}>
-                  <Edit2 size={16}/> {isManagementMode ? '編集モードを終了' : 'リスト・ステータスの編集'}
+                  <Edit2 size={16}/> {isManagementMode ? '終了' : 'リスト・ステータス編集'}
                 </button>
                 <div style={{ height: '1px', backgroundColor: THEME_COLORS.surface, margin: '8px 0' }} />
-                <div style={{ padding: '4px 12px', fontSize: '11px', color: THEME_COLORS.text.muted, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                  <ArrowUpDown size={12}/> リストの並べ替え
-                </div>
-                <button onClick={() => { setReorderMode('category'); setIsManagementMode(false); setIsEditMenuOpen(false); }} style={{ width: '100%', padding: '10px 12px 10px 34px', background: 'none', border: 'none', color: reorderMode === 'category' ? THEME_COLORS.accentRed : THEME_COLORS.text.primary, textAlign: 'left', fontSize: '13px', cursor: 'pointer', borderRadius: '8px', backgroundColor: reorderMode === 'category' ? `${THEME_COLORS.accentRed}1A` : 'transparent' }}>
-                  ・カテゴリ
-                </button>
-                <button onClick={() => { setReorderMode('material'); setIsManagementMode(false); setIsEditMenuOpen(false); }} style={{ width: '100%', padding: '10px 12px 10px 34px', background: 'none', border: 'none', color: reorderMode === 'material' ? THEME_COLORS.accentRed : THEME_COLORS.text.primary, textAlign: 'left', fontSize: '13px', cursor: 'pointer', borderRadius: '8px', backgroundColor: reorderMode === 'material' ? `${THEME_COLORS.accentRed}1A` : 'transparent' }}>
-                  ・教材
-                </button>
+                <button onClick={() => { setReorderMode('category'); setIsManagementMode(false); setIsEditMenuOpen(false); }} style={{ width: '100%', padding: '10px 12px', background: 'none', border: 'none', color: THEME_COLORS.text.primary, textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>・カテゴリ並べ替え</button>
+                <button onClick={() => { setReorderMode('material'); setIsManagementMode(false); setIsEditMenuOpen(false); }} style={{ width: '100%', padding: '10px 12px', background: 'none', border: 'none', color: THEME_COLORS.text.primary, textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>・教材並べ替え</button>
               </ChicCard>
             )}
           </div>
@@ -296,7 +289,7 @@ const RecordView = ({
             <ChicButton onClick={() => {
                onReorderUpdate('categories', sortedCategoriesForReorder);
                setReorderMode('none');
-            }} style={{ width: '100%', marginTop: '30px', marginBottom: '40px' }}>完了</ChicButton>
+            }} style={{ width: '100%', marginTop: '30px' }}>完了</ChicButton>
           </div>
         </div>
       )}
@@ -317,23 +310,14 @@ const RecordView = ({
               <ChicButton onClick={() => { 
                 if(addType === 'category'){ 
                   if(!ValidationUtils.isRequired(newCategoryName)) return;
-                  if (isCategoryNameDuplicate(newCategoryName)) {
-                    setCategoryErrorMessage("既に登録済みのカテゴリです");
-                    return;
-                  }
-                  onAddCategory(newCategoryName); 
-                  setNewCategoryName(""); 
-                  setCategoryErrorMessage("");
+                  if (isCategoryNameDuplicate(newCategoryName)) { setCategoryErrorMessage("登録済みのカテゴリです"); return; }
+                  onAddCategory(newCategoryName); setNewCategoryName(""); 
                 } else { 
                   if(!ValidationUtils.isRequired(newMaterialName) || !selectedCategoryId) return;
-                  onAddMaterial(newMaterialName, selectedCategoryId); 
-                  setNewMaterialName("");
-                  setSelectedCategoryId("");
+                  onAddMaterial(newMaterialName, selectedCategoryId); setNewMaterialName(""); setSelectedCategoryId("");
                 }
                 setIsAddMenuOpen(false);
-              }}>
-                <Check size={18}/>登録
-              </ChicButton>
+              }}><Check size={18}/>登録</ChicButton>
               <ChicButton variant="cancel" onClick={() => setIsAddMenuOpen(false)} style={{ width: '50px', flex: 'none' }}><X size={18}/></ChicButton>
             </div>
           </div>
@@ -346,13 +330,9 @@ const RecordView = ({
         ) : (
           activeCategories.map(cat => renderCategorySection(cat))
         )}
-
         {completedCategories.length > 0 && (
           <div style={{ marginTop: '50px' }}>
-            <div 
-              onClick={() => setIsCompletedExpanded(!isCompletedExpanded)}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', cursor: 'pointer', marginBottom: '20px' }}
-            >
+            <div onClick={() => setIsCompletedExpanded(!isCompletedExpanded)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', cursor: 'pointer', marginBottom: '20px' }}>
               <span style={{ fontSize: '14px', fontWeight: 'bold', color: THEME_COLORS.text.secondary }}>完了済みのカテゴリ ({completedCategories.length})</span>
               {isCompletedExpanded ? <ChevronUp size={20} color={THEME_COLORS.text.secondary}/> : <ChevronDown size={20} color={THEME_COLORS.text.secondary}/>}
             </div>
@@ -365,25 +345,17 @@ const RecordView = ({
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 3000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
           <ChicCard style={{ width: '100%', maxWidth: '350px' }}>
             <ChicTypography variant="h3" style={{ marginBottom: '20px' }}>カテゴリ名の変更</ChicTypography>
-            <ChicTypography variant="label" style={{ display:'block', marginBottom: '8px' }}>カテゴリ名</ChicTypography>
             <ChicInput value={editingCategory.name} onChange={e => {setEditingCategory({...editingCategory, name: e.target.value}); setCategoryErrorMessage("");}} autoFocus />
             {categoryErrorMessage && <div style={{ color: THEME_COLORS.accentRed, fontSize: '12px', marginBottom: '10px' }}>{categoryErrorMessage}</div>}
-            
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <ChicButton onClick={(e) => { 
                 e.stopPropagation();
                 if (!ValidationUtils.isRequired(editingCategory.name)) return;
-                if (isCategoryNameDuplicate(editingCategory.name, editingCategory.id)) {
-                  setCategoryErrorMessage("既に登録済みのカテゴリです");
-                  return;
-                }
+                if (isCategoryNameDuplicate(editingCategory.name, editingCategory.id)) { setCategoryErrorMessage("登録済みのカテゴリです"); return; }
                 onUpdateCategory(editingCategory.id, editingCategory.name, editingCategory.status); 
                 setEditingCategory(null); 
-                setCategoryErrorMessage("");
-              }} style={{ flex: 1 }}>
-                <Check size={18}/> 保存
-              </ChicButton>
-              <ChicButton variant="cancel" onClick={(e) => { e.stopPropagation(); setEditingCategory(null); setCategoryErrorMessage(""); }} style={{ width: '60px' }}><X size={18}/></ChicButton>
+              }} style={{ flex: 1 }}><Check size={18}/> 保存</ChicButton>
+              <ChicButton variant="cancel" onClick={(e) => { e.stopPropagation(); setEditingCategory(null); }} style={{ width: '60px' }}><X size={18}/></ChicButton>
             </div>
           </ChicCard>
         </div>
