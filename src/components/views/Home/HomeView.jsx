@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, PieChart, Pie, CartesianGrid } from 'recharts';
 import { Plus, Check, X, Trash2 } from 'lucide-react';
-import DatePicker from "react-datepicker";
+import DatePicker, { registerLocale } from "react-datepicker"; // ★追加
+import ja from 'date-fns/locale/ja'; // ★追加
 import "react-datepicker/dist/react-datepicker.css";
 import { Timestamp } from 'firebase/firestore'; 
 
@@ -13,6 +14,9 @@ import ChicTypography from '../../common/ChicTypography';
 import { THEME_COLORS } from '../../../styles/theme';
 import { DateUtils } from '../../../utils/DateUtils';
 import { ValidationUtils } from '../../../utils/ValidationUtils';
+
+// ★日本語ロケールの登録
+registerLocale('ja', ja);
 
 const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGoalStatus }) => {
   const [isAddingGoal, setIsAddingGoal] = useState(false);
@@ -227,7 +231,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
           <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
             <div style={{ flex: 1 }}>
               <ChicTypography variant="label">目標時間 (h)</ChicTypography>
-              {/* ★修正: min="1" を設定し、ハイフン入力をreplaceで排除 */}
               <ChicInput 
                 type="number" 
                 min="1" 
@@ -238,7 +241,15 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
             </div>
             <div style={{ flex: 1 }}>
               <ChicTypography variant="label">期限 (任意)</ChicTypography>
-              <DatePicker selected={newGoalDeadline} onChange={date => setNewGoalDeadline(date)} minDate={new Date()} dateFormat="yyyy/MM/dd" customInput={<ChicInput style={{marginBottom: 0}} />} />
+              {/* ★修正: locale="ja" を追加 */}
+              <DatePicker 
+                selected={newGoalDeadline} 
+                onChange={date => setNewGoalDeadline(date)} 
+                minDate={new Date()} 
+                dateFormat="yyyy/MM/dd" 
+                locale="ja" 
+                customInput={<ChicInput style={{marginBottom: 0}} />} 
+              />
             </div>
           </div>
           <ChicTypography variant="label">該当カテゴリ (複数選択)</ChicTypography>
@@ -256,7 +267,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
           <div style={{ display: 'flex', gap: '10px' }}>
             <ChicButton onClick={() => {
               const targetTime = parseInt(newGoalTargetTime);
-              // ★修正: targetTime が 0 以下の場合のガードを追加
               if (!ValidationUtils.isRequired(newGoalTitle) || !targetTime || targetTime <= 0 || selectedCategoryIds.length === 0) {
                 alert("タイトル、目標時間（1時間以上）、該当カテゴリは必須項目です");
                 return;

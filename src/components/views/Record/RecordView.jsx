@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import DatePicker from "react-datepicker";
+import DatePicker, { registerLocale } from "react-datepicker"; // ★追加
+import ja from 'date-fns/locale/ja'; // ★追加
 import "react-datepicker/dist/react-datepicker.css";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Timer, Plus, Settings2, Check, X, Bookmark, Edit2, Trash2, ArrowLeft, Pause, Play, Save, Calendar as CalendarIcon, ArrowUpDown, GripVertical, ChevronDown, ChevronUp, CheckCircle2, RotateCcw } from 'lucide-react';
@@ -13,6 +14,9 @@ import ChicTypography from '../../common/ChicTypography';
 import { THEME_COLORS } from '../../../styles/theme';
 import { DateUtils } from '../../../utils/DateUtils';
 import { ValidationUtils } from '../../../utils/ValidationUtils';
+
+// ★日本語ロケールの登録
+registerLocale('ja', ja);
 
 const RecordView = ({ 
   categories, materials, activeMaterialId, isManagementMode, 
@@ -210,9 +214,17 @@ const RecordView = ({
         <div style={{ borderTop: `1px solid ${THEME_COLORS.surface}`, paddingTop: '30px' }}>
           <ChicTypography variant="h3" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: THEME_COLORS.text.primary }}><CalendarIcon size={14}/> 手動で追加</ChicTypography>
           <ChicCard padding="20px">
-            <DatePicker selected={manualDate} onChange={(date) => setManualDate(date)} maxDate={new Date()} locale="ja" dateFormat="yyyy/MM/dd" customInput={<ChicInput style={{ marginBottom: 0 }} />} popperPlacement="top-start" />
+            {/* ★修正: locale="ja" を追加 */}
+            <DatePicker 
+              selected={manualDate} 
+              onChange={(date) => setManualDate(date)} 
+              maxDate={new Date()} 
+              locale="ja" 
+              dateFormat="yyyy/MM/dd" 
+              customInput={<ChicInput style={{ marginBottom: 0 }} />} 
+              popperPlacement="top-start" 
+            />
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', margin: '20px 0' }}>
-              {/* ★修正: min="0" を設定し、ハイフン入力をreplaceで排除 */}
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <ChicInput type="number" min="0" placeholder="0" value={manualHours} onChange={e => setManualHours(e.target.value.replace(/-/g, ''))} style={{ marginBottom: 0 }} />
                 <span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>時</span>
@@ -225,7 +237,6 @@ const RecordView = ({
             {errorMessage && <p style={{ color: THEME_COLORS.accentRed, fontSize: '12px', marginBottom: '15px', textAlign: 'center' }}>{errorMessage}</p>}
             <ChicButton onClick={() => {
               const h = parseInt(manualHours) || 0; const m = parseInt(manualMinutes) || 0; const totalSec = (h * 3600) + (m * 60);
-              // ★修正: 0分以下での登録をブロック
               if (totalSec <= 0 || totalSec > 86400) { setErrorMessage("学習時間は1分以上で入力してください"); return; }
               onSaveManualLog(material, manualDate, totalSec); setManualHours(""); setManualMinutes(""); setErrorMessage("");
             }} style={{ width: '100%' }}>手動記録を保存</ChicButton>
