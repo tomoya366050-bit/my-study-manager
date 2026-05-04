@@ -219,7 +219,6 @@ const RecordView = ({
               maxDate={new Date()} 
               locale="ja" 
               dateFormat="yyyy/MM/dd" 
-              {/* ★修正: readOnly を追加してキーボード起動を防止 */}
               customInput={<ChicInput style={{ marginBottom: 0 }} readOnly />} 
               popperPlacement="top-start" 
             />

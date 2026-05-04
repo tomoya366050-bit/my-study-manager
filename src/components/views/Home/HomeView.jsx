@@ -246,7 +246,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
                 minDate={new Date()} 
                 dateFormat="yyyy/MM/dd" 
                 locale="ja" 
-                {/* ★修正: readOnly を追加してキーボード起動を防止 */}
                 customInput={<ChicInput style={{marginBottom: 0}} readOnly />} 
               />
             </div>
