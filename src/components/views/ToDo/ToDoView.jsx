@@ -70,4 +70,5 @@ const TodoView = ({ todos, onAddTodo, onToggleTodo, onDeleteTodo }) => {
   );
 };
 
+
 export default TodoView;

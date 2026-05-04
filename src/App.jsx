@@ -10,7 +10,9 @@ import TodoView from './components/views/ToDo/ToDoView';
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 
+// ★追加：各ユーティリティのインポート
 import { TimerUtils } from './utils/TimerUtils';
+import { ValidationUtils } from './utils/ValidationUtils';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -42,7 +44,7 @@ function App() {
       setSeconds(saved.seconds);
       if (saved.startTime) {
         setStartTime(saved.startTime);
-        setIsRunning(true);
+        isRunning(true);
       }
     }
 
@@ -197,7 +199,8 @@ function App() {
             onSaveLog={handleSaveLog} 
             onSaveManualLog={handleSaveManualLog} 
             onAddCategory={(name) => {
-              if (!name.trim()) return;
+              // ★修正：ValidationUtils を適用
+              if (!ValidationUtils.isRequired(name)) return;
               addDoc(collection(db, "categories"), { 
                 name: name.trim(), 
                 userId: user.uid, 
@@ -207,7 +210,8 @@ function App() {
               setIsAddMenuOpen(false);
             }} 
             onAddMaterial={(name, catId) => {
-              if (!name.trim() || !catId) return;
+              // ★修正：ValidationUtils を適用
+              if (!ValidationUtils.isRequired(name) || !catId) return;
               const catMaterials = materials.filter(m => m.categoryId === catId); 
               addDoc(collection(db, "materials"), { 
                 name: name.trim(), 
@@ -218,13 +222,13 @@ function App() {
               setIsAddMenuOpen(false);
             }}
             onUpdateCategory={(id, name, status) => {
-              // ★修正：空文字ガード
-              if (!name.trim()) return;
+              // ★修正：ValidationUtils を適用
+              if (!ValidationUtils.isRequired(name)) return;
               updateDoc(doc(db, "categories", id), { name: name.trim(), status: status || 'active' });
             }}
             onUpdateMaterial={(id, name) => {
-              // ★修正：空文字ガード
-              if (!name.trim()) return;
+              // ★修正：ValidationUtils を適用
+              if (!ValidationUtils.isRequired(name)) return;
               updateDoc(doc(db, "materials", id), { name: name.trim() });
             }}
             onDeleteMaterial={handleDeleteMaterial} 
@@ -234,7 +238,11 @@ function App() {
         )}
         {activeTab === 'history' && <HistoryView logs={filteredLogs} categories={categories} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
         {activeTab === 'todo' && (
-          <TodoView todos={todos} onAddTodo={(text) => addDoc(collection(db, "todos"), { text, completed: false, userId: user.uid })} onToggleTodo={(id, completed) => updateDoc(doc(db, "todos", id), { completed })} onDeleteTodo={(id) => deleteDoc(doc(db, "todos", id))} />
+          <TodoView todos={todos} onAddTodo={(text) => {
+            // ★追加：ToDoの空文字ガード
+            if(!ValidationUtils.isRequired(text)) return;
+            addDoc(collection(db, "todos"), { text, completed: false, userId: user.uid });
+          }} onToggleTodo={(id, completed) => updateDoc(doc(db, "todos", id), { completed })} onDeleteTodo={(id) => deleteDoc(doc(db, "todos", id))} />
         )}
       </div>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
