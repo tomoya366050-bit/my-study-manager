@@ -149,6 +149,14 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
 
   return (
     <div key="home">
+      {/* ★追加: カレンダーの「他の月の日付」を見えなくし、クリックできなくするCSS */}
+      <style>{`
+        .react-datepicker__day--outside-month {
+          visibility: hidden !important;
+          pointer-events: none !important;
+        }
+      `}</style>
+
       <ChicTypography variant="h2">学習サマリー</ChicTypography>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', marginBottom: '25px' }}>
         <div><ChicTypography variant="label">今日</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(todayMin / 60).toFixed(1)}h</div></div>

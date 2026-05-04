@@ -196,6 +196,14 @@ const RecordView = ({
 
     return (
       <div key="timer">
+        {/* ★追加: カレンダーの「他の月の日付」を見えなくし、クリックできなくするCSS */}
+        <style>{`
+          .react-datepicker__day--outside-month {
+            visibility: hidden !important;
+            pointer-events: none !important;
+          }
+        `}</style>
+
         <button onClick={handleBackWithConfirmation} style={{ background: 'none', border: 'none', color: THEME_COLORS.text.secondary, display: 'flex', alignItems: 'center', marginBottom: '20px', cursor: 'pointer' }}><ArrowLeft size={18} style={{ marginRight: '4px' }} /> 戻る</button>
         <div style={{ textAlign: 'center', marginBottom: '10px' }}>
           <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '4px', fontSize: '14px' }}>
