@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, BookOpen, Trash2, ChevronLeft, ChevronRight, Edit2, Check, X, Award } from 'lucide-react';
+import { ChevronDown, ChevronUp, BookOpen, Trash2, ChevronLeft, ChevronRight, Edit2, Check, X, Award, Calendar } from 'lucide-react';
 import ChicCard from '../../common/ChicCard';
 import ChicTypography from '../../common/ChicTypography';
 import ChicInput from '../../common/ChicInput';
@@ -11,7 +11,7 @@ import { ValidationUtils } from '../../../utils/ValidationUtils';
 
 const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
   const [expandedCatId, setExpandedCatId] = useState(null);
-  const [isCompletedGoalsExpanded, setIsCompletedGoalsExpanded] = useState(false); // ★追加：目標用アコーディオン
+  const [isCompletedGoalsExpanded, setIsCompletedGoalsExpanded] = useState(false); 
   
   // カレンダー用ステート
   const [currentMonth, setCurrentMonth] = useState(DateUtils.getToday());
@@ -22,16 +22,14 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
   const [editHours, setEditHours] = useState("");
   const [editMinutes, setEditMinutes] = useState("");
 
-  // FirestoreのTimestampをDateオブジェクトに安全に変換する内部ヘルパー
   const safeGetDate = (timestamp) => timestamp && typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
 
-  // --- 1. カレンダーの生成ロジック ---
+  // --- 1. カレンダーロジック ---
   const calendarDays = useMemo(() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const firstDayIndex = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-
     const daysArray = [];
     for (let i = 0; i < firstDayIndex; i++) { daysArray.push(null); }
     for (let i = 1; i <= daysInMonth; i++) { daysArray.push(new Date(year, month, i)); }
@@ -70,30 +68,38 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
     });
   }, [categories, logs]);
 
-  // --- 3. 完了済み目標の集計 ---
+  // --- 3. 完了済み目標の集計（期間・成功失敗判定を追加） ---
   const completedGoalsStats = useMemo(() => {
     return goals
       .filter(g => g.status === 'completed')
       .map(goal => {
-        // 目標作成日（0時0分0秒）以降の該当ログを抽出
         const goalStartDate = safeGetDate(goal.createdAt);
         goalStartDate.setHours(0, 0, 0, 0);
+        // 完了日がない場合は便宜上現在の時刻を使用
+        const goalEndDate = goal.completedAt ? safeGetDate(goal.completedAt) : new Date();
 
         const goalLogs = logs.filter(log => 
           goal.categoryIds.includes(log.categoryId) && 
-          safeGetDate(log.createdAt) >= goalStartDate
+          safeGetDate(log.createdAt) >= goalStartDate &&
+          safeGetDate(log.createdAt) <= goalEndDate
         );
         const actualSec = goalLogs.reduce((s, l) => s + l.duration, 0);
-        return { ...goal, actualSec };
+        const isSuccess = actualSec >= (goal.targetTime * 3600);
+
+        return { 
+          ...goal, 
+          actualSec, 
+          isSuccess,
+          periodText: `${DateUtils.formatTimestampToYMD(goal.createdAt)} 〜 ${DateUtils.formatTimestampToYMD(goalEndDate)}`
+        };
       });
   }, [goals, logs]);
 
-  // --- 4. 時間表示用ヘルパー (UIの装飾を維持するためJSXを返す) ---
+  // --- 4. 時間表示用ヘルパー ---
   const formatTimeJSX = (totalSeconds, showDetail = false) => {
     const totalMinutes = totalSeconds / 60;
     const h = Math.floor(totalMinutes / 60);
     const m = Math.round(totalMinutes % 60);
-    
     if (h > 0) return (
       <span style={{ color: THEME_COLORS.accentRed, fontWeight: 'bold' }}>
         {h}<span style={{ fontSize: '10px', margin: '0 2px', fontWeight: 'normal', color: THEME_COLORS.text.muted }}>時間</span>
@@ -107,7 +113,6 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
     );
   };
 
-  // 編集開始
   const startEdit = (log) => {
     setEditingLogId(log.id);
     setEditHours(Math.floor(log.duration / 3600).toString());
@@ -128,7 +133,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
 
   return (
     <div style={{ width: '100%', boxSizing: 'border-box' }}>
-      {/* カレンダーセクション */}
+      {/* カレンダー */}
       <section style={{ marginBottom: '40px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
           <button onClick={prevMonth} style={{ background: 'none', border: 'none', color: THEME_COLORS.text.primary, cursor: 'pointer' }}><ChevronLeft size={24} /></button>
@@ -154,7 +159,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
         </div>
       </section>
 
-      {/* 選択された日の記録 */}
+      {/* 選択日の記録 */}
       <section style={{ marginBottom: '50px' }}>
         <ChicTypography variant="caption" style={{ display: 'block', marginBottom: '15px', color: THEME_COLORS.text.secondary, borderBottom: `1px solid ${THEME_COLORS.surface}`, paddingBottom: '5px' }}>{selectedDate.toLocaleDateString('ja-JP')} の記録</ChicTypography>
         {selectedDateLogs.length === 0 ? (
@@ -202,16 +207,13 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
         )}
       </section>
 
-      {/* ★追加：完了した学習目標（カテゴリ累計の上に配置） */}
+      {/* 完了した学習目標（修正点） */}
       {completedGoalsStats.length > 0 && (
         <section style={{ marginBottom: '40px' }}>
-          <div 
-            onClick={() => setIsCompletedGoalsExpanded(!isCompletedGoalsExpanded)}
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', cursor: 'pointer', marginBottom: '20px' }}
-          >
+          <div onClick={() => setIsCompletedGoalsExpanded(!isCompletedGoalsExpanded)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', cursor: 'pointer', marginBottom: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Award size={18} color="#4ade80" />
-              <span style={{ fontSize: '14px', fontWeight: 'bold', color: THEME_COLORS.text.secondary }}>達成済みの学習目標 ({completedGoalsStats.length})</span>
+              <Award size={18} color={THEME_COLORS.accentRed} />
+              <span style={{ fontSize: '14px', fontWeight: 'bold', color: THEME_COLORS.text.secondary }}>学習目標の履歴 ({completedGoalsStats.length})</span>
             </div>
             {isCompletedGoalsExpanded ? <ChevronUp size={20} color={THEME_COLORS.text.secondary}/> : <ChevronDown size={20} color={THEME_COLORS.text.secondary}/>}
           </div>
@@ -220,15 +222,23 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {completedGoalsStats.map((goal) => (
                 <ChicCard key={goal.id} padding="15px">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <ChicTypography variant="h3" style={{ margin: 0, fontSize: '15px', color: THEME_COLORS.text.primary }}>{goal.title}</ChicTypography>
-                      <div style={{ fontSize: '11px', color: THEME_COLORS.text.muted, marginTop: '4px' }}>
-                        実績: {(goal.actualSec / 3600).toFixed(1)}h / {goal.targetTime}h
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <ChicTypography variant="h3" style={{ margin: 0, fontSize: '15px', color: THEME_COLORS.text.primary }}>{goal.title}</ChicTypography>
+                        <div style={{ color: goal.isSuccess ? '#4ade80' : THEME_COLORS.accentRed, fontSize: '10px', fontWeight: 'bold', border: `1px solid ${goal.isSuccess ? '#4ade80' : THEME_COLORS.accentRed}`, padding: '1px 6px', borderRadius: '4px' }}>
+                          {goal.isSuccess ? 'SUCCESS' : 'FINISHED'}
+                        </div>
                       </div>
-                    </div>
-                    <div style={{ color: '#4ade80', fontSize: '11px', fontWeight: 'bold', border: '1px solid #4ade80', padding: '2px 8px', borderRadius: '12px' }}>
-                      COMPLETED
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '11px', color: THEME_COLORS.text.muted }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={12}/> 期間: {goal.periodText}</div>
+                        {goal.deadline && (
+                          <div style={{ paddingLeft: '16px' }}>期限: {DateUtils.formatTimestampToYMD(goal.deadline)}</div>
+                        )}
+                        <div style={{ paddingLeft: '16px', marginTop: '4px', color: THEME_COLORS.text.secondary }}>
+                          最終実績: {(goal.actualSec / 3600).toFixed(1)}h / {goal.targetTime}h
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </ChicCard>
@@ -238,7 +248,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog }) => {
         </section>
       )}
 
-      {/* 累計統計 */}
+      {/* カテゴリ別 累計 */}
       <section style={{ marginBottom: '30px' }}>
         <ChicTypography variant="h2" style={{ textAlign: 'center', marginBottom: '20px', color: THEME_COLORS.text.primary }}>カテゴリ別 累計</ChicTypography>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

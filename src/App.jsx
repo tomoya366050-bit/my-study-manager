@@ -106,14 +106,14 @@ function App() {
     setDailyGoalMin(val);
   };
 
-  const handleAddLearningGoal = async (goalData) => {
-    await addDoc(collection(db, "goals"), {
-      ...goalData,
-      userId: user.uid,
-      status: 'active',
-      createdAt: serverTimestamp()
-    });
-  };
+const handleUpdateGoalStatus = async (goalId, status) => {
+  const updateData = { status };
+  // statusが'completed'になる時に、その時のサーバー時刻を保存する
+  if (status === 'completed') {
+    updateData.completedAt = serverTimestamp();
+  }
+  await updateDoc(doc(db, "goals", goalId), updateData);
+};
 
   const handleUpdateGoalStatus = async (goalId, status) => {
     await updateDoc(doc(db, "goals", goalId), { status });
