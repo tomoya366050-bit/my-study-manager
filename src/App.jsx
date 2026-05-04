@@ -204,8 +204,6 @@ function App() {
             onAddGoal={handleAddLearningGoal} 
             onDeleteGoal={handleDeleteGoal}
             onUpdateGoalStatus={handleUpdateGoalStatus}
-            dailyGoalMin={dailyGoalMin} 
-            onSaveGoal={handleSaveGoal} 
           />
         )}
         {activeTab === 'record' && (

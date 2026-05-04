@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, PieChart, Pie, CartesianGrid } from 'recharts';
-import { Target, Settings2, Plus, Calendar as CalendarIcon, Check, X, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Check, X, Trash2 } from 'lucide-react';
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { Timestamp } from 'firebase/firestore'; 
@@ -14,17 +14,13 @@ import { THEME_COLORS } from '../../../styles/theme';
 import { DateUtils } from '../../../utils/DateUtils';
 import { ValidationUtils } from '../../../utils/ValidationUtils';
 
-const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGoalStatus, dailyGoalMin, onSaveGoal }) => {
-  const [isDailyGoalOpen, setIsDailyGoalOpen] = useState(false);
-  const [isDailyGoalDisplayOpen, setIsDailyGoalDisplayOpen] = useState(true);
-  const [tempDailyGoal, setTempDailyGoal] = useState("");
-
+const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGoalStatus }) => {
+  // 学習目標（複数）追加用のステートのみ維持
   const [isAddingGoal, setIsAddingGoal] = useState(false);
   const [newGoalTitle, setNewGoalTitle] = useState("");
   const [newGoalTargetTime, setNewGoalTargetTime] = useState(""); 
   const [newGoalDeadline, setNewGoalDeadline] = useState(null);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
-  const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
 
   const now = DateUtils.getToday();
   const todayKey = DateUtils.getDateKey(now);
@@ -37,7 +33,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   // --- 学習統計計算 ---
   const todaySec = logs.filter(l => DateUtils.getDateKey(safeGetDate(l.createdAt)) === todayKey).reduce((s, l) => s + l.duration, 0);
   const todayMin = Math.floor(todaySec / 60);
-  const dailyProgressPercent = dailyGoalMin > 0 ? Math.min(Math.round((todayMin / dailyGoalMin) * 100), 100) : 0;
 
   const weekRange = DateUtils.getCurrentWeekRange();
   const currentWeekLogs = logs.filter(l => {
@@ -89,14 +84,13 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
       daysRemaining = DateUtils.calculateDaysRemaining(goal.deadline);
       if (daysRemaining <= 0) {
         isOverdue = true;
-        overdueDays = 1 - daysRemaining; // 翌日を「1日経過」とする計算
+        overdueDays = 1 - daysRemaining;
       } else {
         const remainingSec = Math.max(targetSec - currentSec, 0);
         dailyQuotaText = DateUtils.formatSecondsToHM(remainingSec / daysRemaining);
       }
     }
 
-    // 登録ボタンの表示条件: 達成率100% 以上 または 期限切れ
     const canRegister = goal.status === 'active' && (progressPercent >= 100 || isOverdue);
 
     return (
@@ -147,7 +141,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   };
 
   const activeGoals = goals.filter(g => g.status === 'active');
-  const completedGoals = goals.filter(g => g.status === 'completed');
 
   return (
     <div key="home">
@@ -267,45 +260,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
       )}
 
       {activeGoals.map(goal => renderGoalCard(goal))}
-
-      {completedGoals.length > 0 && (
-        <div style={{ marginTop: '30px' }}>
-          <div onClick={() => setIsCompletedExpanded(!isCompletedExpanded)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 15px', backgroundColor: THEME_COLORS.surface, borderRadius: '8px', cursor: 'pointer', marginBottom: '10px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 'bold', color: THEME_COLORS.text.secondary }}>達成済みの目標 ({completedGoals.length})</span>
-            {isCompletedExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </div>
-          {isCompletedExpanded && completedGoals.map(goal => renderGoalCard(goal))}
-        </div>
-      )}
-
-      <div style={{ marginTop: '50px', borderTop: `1px solid ${THEME_COLORS.surface}`, paddingTop: '20px' }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <ChicButton variant={isDailyGoalDisplayOpen ? "save" : "cancel"} onClick={() => setIsDailyGoalDisplayOpen(!isDailyGoalDisplayOpen)} style={{ backgroundColor: THEME_COLORS.background }}><Target size={16}/>進捗</ChicButton>
-          <ChicButton variant="cancel" onClick={() => setIsDailyGoalOpen(!isDailyGoalOpen)} style={{ backgroundColor: THEME_COLORS.background, flex: 1 }}><Settings2 size={16}/>設定</ChicButton>
-        </div>
-        {isDailyGoalOpen && (
-          <ChicCard style={{ marginTop: '10px' }}>
-            <ChicTypography variant="label">今日の目標学習時間 (分)</ChicTypography>
-            <ChicInput type="number" value={tempDailyGoal} onChange={e => setTempDailyGoal(e.target.value)} placeholder="120" />
-            <ChicButton onClick={() => { 
-              if (!ValidationUtils.isValidNumber(tempDailyGoal)) { alert("有効な数値を入力してください"); return; }
-              onSaveGoal(tempDailyGoal); setIsDailyGoalOpen(false); setTempDailyGoal(""); 
-            }}>保存</ChicButton>
-          </ChicCard>
-        )}
-        {isDailyGoalDisplayOpen && dailyGoalMin > 0 && (
-          <ChicCard style={{ marginTop: '10px' }}>
-            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '8px'}}>
-              <ChicTypography variant="label" style={{ color: THEME_COLORS.text.secondary }}>今日の達成度</ChicTypography>
-              <span style={{fontWeight: 'bold', color: THEME_COLORS.accentRed, fontSize: '12px'}}>{dailyProgressPercent}%</span>
-            </div>
-            <div style={{width: '100%', height: '4px', backgroundColor: THEME_COLORS.surface, borderRadius: '2px', overflow: 'hidden'}}>
-              <div style={{width: `${dailyProgressPercent}%`, height: '100%', backgroundColor: THEME_COLORS.accentRed, transition: 'width 0.8s ease'}} />
-            </div>
-            <ChicTypography variant="caption" style={{ marginTop: '10px', display: 'block', color: THEME_COLORS.text.muted }}>{todayMin} / {dailyGoalMin} 分 完了</ChicTypography>
-          </ChicCard>
-        )}
-      </div>
     </div>
   );
 };
