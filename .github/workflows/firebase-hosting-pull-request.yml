@@ -11,15 +11,26 @@ jobs:
   build_and_preview:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
-   steps:
+    steps:
       - uses: actions/checkout@v4
-      
-      # 名前をわざと目立つものに変える
-      - name: "[DEBUG] START INSTALL AND BUILD"
-        run: npm ci && npm run build
 
+      # 1. Node.js環境を整える（安定性のために追加）
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 2. 必要なライブラリをインストール（これが抜けていたためエラーになっていました）
+      - name: Install dependencies
+        run: npm ci
+
+      # 3. 本番用ファイルをビルド
+      - name: Build project
+        run: npm run build
+
+      # 4. Firebaseにプレビュー版をデプロイ
       - uses: FirebaseExtended/action-hosting-deploy@v0
-        # ...（以下は元のまま）
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_APP_MYSTUDYMANAGER }}
