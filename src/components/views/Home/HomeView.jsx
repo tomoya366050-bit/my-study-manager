@@ -40,12 +40,8 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   });
 
   const weekTotalSec = currentWeekLogs.reduce((s, l) => s + l.duration, 0);
-
-  // ★修正箇所：今日が週の何日目かを取得して平均を算出 (日=1, 月=2, ... 土=7)
   const daysPassed = now.getDay() + 1; 
   const weeklyAvgMin = Math.floor((weekTotalSec / daysPassed) / 60); 
-
-  const monthSec = logs.filter(l => safeGetDate(l.createdAt).getMonth() === now.getMonth()).reduce((acc, l) => acc + l.duration, 0);
 
   const weeklyData = weekRange.map(date => {
     const dKey = DateUtils.getDateKey(date);
@@ -102,14 +98,16 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div>
             <ChicTypography variant="h3" style={{ margin: 0, color: THEME_COLORS.text.primary }}>{goal.title}</ChicTypography>
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+              {/* ★修正箇所：現在存在するカテゴリリストと照合し、削除済みは表示しない */}
               {goal.categoryIds.map(id => {
-                const cat = categories.find(c => c.id === id);
-                return cat ? (
-                  <span key={id} style={{ fontSize: '10px', color: THEME_COLORS.text.muted, backgroundColor: THEME_COLORS.surface, padding: '2px 6px', borderRadius: '4px' }}>
-                    {cat.name}
+                const foundCategory = categories.find(c => c.id === id);
+                if (!foundCategory) return null;
+                return (
+                  <span key={id} style={{ fontSize: '10px', color: THEME_COLORS.text.muted, backgroundColor: THEME_COLORS.surface, padding: '2px 8px', borderRadius: '4px' }}>
+                    {foundCategory.name}
                   </span>
-                ) : null;
+                );
               })}
             </div>
           </div>
@@ -155,7 +153,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', marginBottom: '25px' }}>
         <div><ChicTypography variant="label">今日</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(todayMin / 60).toFixed(1)}h</div></div>
         <div><ChicTypography variant="label">今週</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(weekTotalSec / 3600).toFixed(1)}h</div></div>
-        <div><ChicTypography variant="label">今月</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(monthSec / 3600).toFixed(1)}h</div></div>
+        <div><ChicTypography variant="label">今月</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(logs.filter(l=>safeGetDate(l.createdAt).getMonth()===now.getMonth()).reduce((acc,l)=>acc+l.duration,0)/3600).toFixed(1)}h</div></div>
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '15px' }}>
