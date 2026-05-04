@@ -10,7 +10,6 @@ import TodoView from './components/views/ToDo/ToDoView';
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 
-// ★追加：タイマー用ユーティリティー
 import { TimerUtils } from './utils/TimerUtils';
 
 function App() {
@@ -27,8 +26,6 @@ function App() {
   const [isManagementMode, setIsManagementMode] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [seconds, setSeconds] = useState(0);
-
-  // ★追加：開始時刻をミリ秒で保持するState
   const [startTime, setStartTime] = useState(null);
 
   useEffect(() => {
@@ -36,39 +33,33 @@ function App() {
     return () => unsubAuth();
   }, []);
 
-  // ★初期ロード時に中断されたセッションを復元
-  useEffect(() =>  {
+  useEffect(() => {
     if (!user) return;
     
     const saved = TimerUtils.loadSession();
     if (saved.activeId) {
       setActiveMaterialId(saved.activeId);
       setSeconds(saved.seconds);
-      // 開始時刻がある場合は計測中として復元
       if (saved.startTime) {
         setStartTime(saved.startTime);
         setIsRunning(true);
       }
     }
-    // ...以降、既存のFirestore取得ロジック
-    let unsubLogs = () => {};
+
     const unsubCats = onSnapshot(query(collection(db, "categories"), where("userId", "==", user.uid), orderBy("sortIndex", "asc")), (snap) => setCategories(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubMats = onSnapshot(query(collection(db, "materials"), where("userId", "==", user.uid), orderBy("sortIndex", "asc")), (snap) => setMaterials(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     const unsubTodos = onSnapshot(query(collection(db, "todos"), where("userId", "==", user.uid)), (snap) => setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
 
-    const setupLogListener = () => {
-      return onSnapshot(
-        query(collection(db, "study_logs"), where("userId", "==", user.uid), orderBy("createdAt", "desc")),
-        (snap) => setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
-        (err) => {
-          unsubLogs = onSnapshot(query(collection(db, "study_logs"), where("userId", "==", user.uid)), (snap) => {
-            const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            setLogs(data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
-          });
-        }
-      );
-    };
-    unsubLogs = setupLogListener();
+    let unsubLogs = onSnapshot(
+      query(collection(db, "study_logs"), where("userId", "==", user.uid), orderBy("createdAt", "desc")),
+      (snap) => setLogs(snap.docs.map(d => ({ id: d.id, ...d.data() }))),
+      (err) => {
+        onSnapshot(query(collection(db, "study_logs"), where("userId", "==", user.uid)), (snap) => {
+          const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setLogs(data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)));
+        });
+      }
+    );
 
     const fetchGoal = async () => {
       const docSnap = await getDoc(doc(db, "user_settings", user.uid));
@@ -79,14 +70,12 @@ function App() {
     return () => { unsubCats(); unsubMats(); unsubTodos(); unsubLogs(); };
   }, [user]);
 
-  // ★修正：タイマー更新ロジック（差分計算方式）
   useEffect(() => {
     let interval = null;
     if (isRunning && startTime) {
       interval = setInterval(() => {
         const elapsed = TimerUtils.calculateElapsed(startTime);
         setSeconds(elapsed);
-        // 万が一のリロードに備えてこまめに保存
         TimerUtils.saveSession(startTime, activeMaterialId, elapsed);
       }, 1000);
     } else {
@@ -95,16 +84,13 @@ function App() {
     return () => clearInterval(interval);
   }, [isRunning, startTime, activeMaterialId]);
 
-  // ★追加：タイマー開始・一時停止の切り替え
   const handleToggleTimer = () => {
     if (!isRunning) {
-      // 開始：現在時刻から既に経過している秒数を引いて「仮想的な開始時刻」を作る
       const newStart = Date.now() - (seconds * 1000);
       setStartTime(newStart);
       setIsRunning(true);
       TimerUtils.saveSession(newStart, activeMaterialId, seconds);
     } else {
-      // 一時停止：開始時刻を消し、現在の秒数を確定させる
       setIsRunning(false);
       setStartTime(null);
       TimerUtils.saveSession(null, activeMaterialId, seconds);
@@ -124,7 +110,6 @@ function App() {
 
   const handleSaveLog = async (material) => {
     await addDoc(collection(db, "study_logs"), { userId: user.uid, materialId: material.id, materialName: material.name, categoryId: material.categoryId, duration: seconds, createdAt: serverTimestamp() });
-    // 保存後はセッションをクリア
     TimerUtils.clearSession();
     setActiveMaterialId(null); setSeconds(0); setStartTime(null); setIsRunning(false); setActiveTab('home');
   };
@@ -174,9 +159,7 @@ function App() {
   };
 
   const handleUpdateLog = async (logId, newDurationSeconds) => {
-    await updateDoc(doc(db, "study_logs", logId), {
-      duration: newDurationSeconds
-    });
+    await updateDoc(doc(db, "study_logs", logId), { duration: newDurationSeconds });
   };
 
   const layoutStyles = {
@@ -203,24 +186,40 @@ function App() {
             isRunning={isRunning} 
             setActiveMaterialId={(id) => {
               setActiveMaterialId(id);
-              // 教材を選択した時点で一旦セッションを保存（秒数は0）
               if (id) TimerUtils.saveSession(null, id, 0);
               else TimerUtils.clearSession();
             }} 
             setIsManagementMode={setIsManagementMode} 
             setIsAddMenuOpen={setIsAddMenuOpen} 
             setAddType={setAddType} 
-            setIsRunning={handleToggleTimer} // ★修正：専用のトグル関数を渡す
+            setIsRunning={handleToggleTimer}
             setSeconds={setSeconds} 
             onSaveLog={handleSaveLog} 
             onSaveManualLog={handleSaveManualLog} 
-            onAddCategory={(name) => addDoc(collection(db, "categories"), { name: name.trim(), userId: user.uid, sortIndex: categories.length })} 
-            onAddCategory={(name) => addDoc(collection(db, "categories"), { 
-              name: name.trim(), 
-              userId: user.uid, 
-              sortIndex: categories.length,
-              status: 'active' // ★ここを追加
-            })}            
+            onAddCategory={(name) => {
+              if (!name.trim()) return;
+              addDoc(collection(db, "categories"), { 
+                name: name.trim(), 
+                userId: user.uid, 
+                sortIndex: categories.length,
+                status: 'active'
+              });
+              setIsAddMenuOpen(false);
+            }} 
+            onAddMaterial={(name, catId) => {
+              if (!name.trim() || !catId) return;
+              const catMaterials = materials.filter(m => m.categoryId === catId); 
+              addDoc(collection(db, "materials"), { 
+                name: name.trim(), 
+                categoryId: catId, 
+                userId: user.uid, 
+                sortIndex: catMaterials.length 
+              });
+              setIsAddMenuOpen(false);
+            }}
+            onUpdateCategory={(id, name, status) => {
+              updateDoc(doc(db, "categories", id), { name: name.trim(), status: status || 'active' });
+            }}
             onUpdateMaterial={(id, name) => updateDoc(doc(db, "materials", id), { name })} 
             onDeleteMaterial={handleDeleteMaterial} 
             onDeleteCategory={handleDeleteCategory} 

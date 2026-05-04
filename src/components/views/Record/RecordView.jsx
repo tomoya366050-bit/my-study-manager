@@ -4,7 +4,6 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import ja from "date-fns/locale/ja";
 import "react-datepicker/dist/react-datepicker.css";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-// ★追加: ChevronDown, ChevronUp をインポート
 import { Timer, Plus, Settings2, Check, X, Bookmark, Edit2, Trash2, ArrowLeft, Pause, Play, Save, Calendar as CalendarIcon, ArrowUpDown, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import ChicCard from '../../common/ChicCard';
 import ChicButton from '../../common/ChicButton';
@@ -26,13 +25,8 @@ const RecordView = ({
   const [newCategoryName, setNewCategoryName] = useState("");
   const [editingMaterialId, setEditingMaterialId] = useState(null);
   const [editingMaterialName, setEditingMaterialName] = useState("");
-  
-  // ★修正: カテゴリ編集はIDと名前だけでなく、ステータスも持つオブジェクトで管理
   const [editingCategory, setEditingCategory] = useState(null); 
-  
   const [reorderMode, setReorderMode] = useState('none'); 
-  
-  // ★追加: 編集ドロップダウンと完了済みアコーディオンの開閉ステート
   const [isEditMenuOpen, setIsEditMenuOpen] = useState(false);
   const [isCompletedExpanded, setIsCompletedExpanded] = useState(false);
 
@@ -76,7 +70,6 @@ const RecordView = ({
     }
   };
 
-  // --- 1. タイマー・手入力画面 ---
   if (activeMaterialId) {
     const material = materials.find(m => m.id === activeMaterialId);
     const category = categories.find(c => c.id === material?.categoryId);
@@ -117,7 +110,6 @@ const RecordView = ({
     );
   }
 
-  // --- 2. カテゴリ・教材一覧のレンダリング用関数（重複を避けるため） ---
   const renderCategorySection = (cat) => {
     const isCompleted = cat.status === 'completed';
     return (
@@ -177,32 +169,25 @@ const RecordView = ({
     );
   };
 
-  // --- 学習中と完了済みを分離 ---
   const activeCategories = categories.filter(c => c.status !== 'completed');
   const completedCategories = categories.filter(c => c.status === 'completed');
 
   return (
     <div key="record-list">
-      {/* --- ヘッダー領域 --- */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <ChicTypography variant="h2" style={{ marginBottom: 0, fontWeight: 'bold', color: THEME_COLORS.text.primary }}>
           {reorderMode !== 'none' ? '並べ替え中' : isManagementMode ? 'リスト編集中' : '記録する'}
         </ChicTypography>
         
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          {/* ★修正: 編集・管理ボタン（ドロップダウンメニュー付き） */}
           <div style={{ position: 'relative' }}>
             <Settings2 size={24} onClick={() => setIsEditMenuOpen(!isEditMenuOpen)} style={{ cursor: 'pointer', color: (isManagementMode || reorderMode !== 'none') ? THEME_COLORS.accentRed : THEME_COLORS.text.secondary }} />
             {isEditMenuOpen && (
               <ChicCard style={{ position: 'absolute', top: '35px', right: 0, zIndex: 100, width: '220px', border: `1px solid ${THEME_COLORS.surface}` }} padding="8px">
-                {/* 1. リスト・ステータスの編集 */}
                 <button onClick={() => { setIsManagementMode(!isManagementMode); setReorderMode('none'); setIsEditMenuOpen(false); }} style={{ width: '100%', padding: '12px', background: 'none', border: 'none', color: isManagementMode ? THEME_COLORS.accentRed : THEME_COLORS.text.primary, textAlign: 'left', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px', backgroundColor: isManagementMode ? `${THEME_COLORS.accentRed}1A` : 'transparent' }}>
                   <Edit2 size={16}/> {isManagementMode ? '編集モードを終了' : 'リスト・ステータスの編集'}
                 </button>
-                
                 <div style={{ height: '1px', backgroundColor: THEME_COLORS.surface, margin: '8px 0' }} />
-                
-                {/* 2. リストの並べ替え（構造化） */}
                 <div style={{ padding: '4px 12px', fontSize: '11px', color: THEME_COLORS.text.muted, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
                   <ArrowUpDown size={12}/> リストの並べ替え
                 </div>
@@ -215,12 +200,10 @@ const RecordView = ({
               </ChicCard>
             )}
           </div>
-          
           <Plus size={24} onClick={() => setIsAddMenuOpen(!isAddMenuOpen)} style={{ cursor: 'pointer', color: isAddMenuOpen ? THEME_COLORS.accentRed : THEME_COLORS.text.secondary }} />
         </div>
       </div>
 
-      {/* --- カテゴリの全体並べ替えモーダル（既存維持） --- */}
       {reorderMode === 'category' && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 2000, padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', overflowY: 'auto' }}>
           <div style={{ width: '100%', maxWidth: '400px' }}>
@@ -252,7 +235,6 @@ const RecordView = ({
         </div>
       )}
 
-      {/* --- 教材・カテゴリ追加メニュー（既存維持） --- */}
       {isAddMenuOpen && (
         <ChicCard padding="10px">
           <div style={{ display: 'flex', backgroundColor: THEME_COLORS.surface, borderRadius: '12px', padding: '4px', marginBottom: '20px' }}>
@@ -264,22 +246,35 @@ const RecordView = ({
                 <ChicSelect value={selectedCategoryId} onChange={e => setSelectedCategoryId(e.target.value)} options={activeCategories} placeholder="カテゴリを選択" />
                 <ChicInput value={newMaterialName} onChange={e => setNewMaterialName(e.target.value)} placeholder="教材名を入力..." />
               </>}
-            <div style={{ display: 'flex', gap: '10px' }}><ChicButton onClick={() => { if(addType==='category'){ onAddCategory(newCategoryName); setNewCategoryName(""); } else { onAddMaterial(newMaterialName, selectedCategoryId); setNewMaterialName(""); } }}><Check size={18}/>登録</ChicButton><ChicButton variant="cancel" onClick={() => setIsAddMenuOpen(false)} style={{ width: '50px', flex: 'none' }}><X size={18}/></ChicButton></div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <ChicButton onClick={() => { 
+                if(addType === 'category'){ 
+                  if(!newCategoryName.trim()) return;
+                  onAddCategory(newCategoryName); 
+                  setNewCategoryName(""); 
+                } else { 
+                  if(!newMaterialName.trim() || !selectedCategoryId) return;
+                  onAddMaterial(newMaterialName, selectedCategoryId); 
+                  setNewMaterialName("");
+                  setSelectedCategoryId("");
+                }
+                setIsAddMenuOpen(false);
+              }}>
+                <Check size={18}/>登録
+              </ChicButton>
+              <ChicButton variant="cancel" onClick={() => setIsAddMenuOpen(false)} style={{ width: '50px', flex: 'none' }}><X size={18}/></ChicButton>
+            </div>
           </div>
         </ChicCard>
       )}
 
-      {/* --- リスト表示エリア（DragDropContext で包む） --- */}
       <DragDropContext onDragEnd={onDragEnd}>
-        
-        {/* 1. 学習中のカテゴリ */}
         {activeCategories.length === 0 && completedCategories.length === 0 ? (
            <ChicTypography variant="body" style={{ textAlign: 'center', marginTop: '40px', color: THEME_COLORS.text.muted }}>右上の＋ボタンから追加してください</ChicTypography>
         ) : (
           activeCategories.map(cat => renderCategorySection(cat))
         )}
 
-        {/* 2. 完了済みのカテゴリ（アコーディオン） */}
         {completedCategories.length > 0 && (
           <div style={{ marginTop: '50px' }}>
             <div 
@@ -289,47 +284,36 @@ const RecordView = ({
               <span style={{ fontSize: '14px', fontWeight: 'bold', color: THEME_COLORS.text.secondary }}>完了済みのカテゴリ ({completedCategories.length})</span>
               {isCompletedExpanded ? <ChevronUp size={20} color={THEME_COLORS.text.secondary}/> : <ChevronDown size={20} color={THEME_COLORS.text.secondary}/>}
             </div>
-            
             {isCompletedExpanded && completedCategories.map(cat => renderCategorySection(cat))}
           </div>
         )}
-
       </DragDropContext>
 
-      {/* --- カテゴリ編集用のポップアップ（新規追加） --- */}
       {editingCategory && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 3000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }}>
           <ChicCard style={{ width: '100%', maxWidth: '350px' }}>
             <ChicTypography variant="h3" style={{ marginBottom: '20px' }}>カテゴリの編集</ChicTypography>
-            
             <ChicTypography variant="label" style={{ display:'block', marginBottom: '8px' }}>カテゴリ名</ChicTypography>
             <ChicInput value={editingCategory.name} onChange={e => setEditingCategory({...editingCategory, name: e.target.value})} autoFocus />
-            
             <ChicTypography variant="label" style={{ display:'block', marginBottom: '8px', marginTop: '15px' }}>ステータス</ChicTypography>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
-              <ChicButton 
-                variant={editingCategory.status === 'active' ? 'save' : 'cancel'} 
-                onClick={() => setEditingCategory({...editingCategory, status: 'active'})} 
-                style={{ flex: 1, height: 'auto', padding: '10px' }}
-              >学習中</ChicButton>
-              <ChicButton 
-                variant={editingCategory.status === 'completed' ? 'save' : 'cancel'} 
-                onClick={() => setEditingCategory({...editingCategory, status: 'completed'})} 
-                style={{ flex: 1, height: 'auto', padding: '10px' }}
-              >完了済み</ChicButton>
+              <ChicButton variant={editingCategory.status === 'active' ? 'save' : 'cancel'} onClick={() => setEditingCategory({...editingCategory, status: 'active'})} style={{ flex: 1, padding: '10px' }}>学習中</ChicButton>
+              <ChicButton variant={editingCategory.status === 'completed' ? 'save' : 'cancel'} onClick={() => setEditingCategory({...editingCategory, status: 'completed'})} style={{ flex: 1, padding: '10px' }}>完了済み</ChicButton>
             </div>
-            
             <div style={{ display: 'flex', gap: '10px' }}>
               <ChicButton onClick={() => { 
+                if (!editingCategory.name.trim()) return;
                 onUpdateCategory(editingCategory.id, editingCategory.name, editingCategory.status); 
                 setEditingCategory(null); 
-              }} style={{ flex: 1 }}><Check size={18}/> 保存</ChicButton>
+                setIsManagementMode(false);
+              }} style={{ flex: 1 }}>
+                <Check size={18}/> 保存
+              </ChicButton>
               <ChicButton variant="cancel" onClick={() => setEditingCategory(null)} style={{ width: '60px' }}><X size={18}/></ChicButton>
             </div>
           </ChicCard>
         </div>
       )}
-
     </div>
   );
 };
