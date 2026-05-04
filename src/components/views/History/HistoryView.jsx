@@ -123,18 +123,22 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
             const hoursStr = getDayTotalHours(date);
             const hours = parseFloat(hoursStr);
 
-            // ★段階的なカラーリング（ヒートマップ）の計算
+            // ★段階的なカラーリング（コントラストを大げさに強調）
             let bgColor = THEME_COLORS.background;
             if (isSelected) {
-              bgColor = THEME_COLORS.accentRed;
+              // 選択中は視認性重視で枠線で強調するため、ベースカラーは維持または少し濃くする
+              bgColor = hours > 0 ? THEME_COLORS.accentRed : THEME_COLORS.surface;
             } else if (hours > 0) {
-              if (hours > 6) bgColor = `${THEME_COLORS.accentRed}CC`; // 80%不透明
-              else if (hours > 3) bgColor = `${THEME_COLORS.accentRed}99`; // 60%不透明
-              else if (hours > 1) bgColor = `${THEME_COLORS.accentRed}66`; // 40%不透明
-              else bgColor = `${THEME_COLORS.accentRed}33`; // 20%不透明
+              if (hours > 6) bgColor = `${THEME_COLORS.accentRed}`;       // 100% (FF) - 猛烈に頑張った
+              else if (hours > 3) bgColor = `${THEME_COLORS.accentRed}B3`; // 70% (B3)  - かなり頑張った
+              else if (hours > 1) bgColor = `${THEME_COLORS.accentRed}59`; // 35% (59)  - 普通
+              else bgColor = `${THEME_COLORS.accentRed}26`;                // 15% (26)  - ちょっとだけ
             } else if (isToday) {
-              bgColor = THEME_COLORS.surface;
+              bgColor = THEME_COLORS.surface; // 0時間の「今日」
             }
+
+            // 文字色の判定（色が濃い＝文字は白、色が薄い＝文字はグレー）
+            const isDarkBackground = isSelected || hours > 3;
 
             return (
               <div 
@@ -142,7 +146,7 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
                 onClick={() => setSelectedDate(date)} 
                 style={{ 
                   backgroundColor: bgColor, 
-                  border: `1px solid ${isSelected ? THEME_COLORS.accentRed : THEME_COLORS.surface}`, 
+                  border: `1px solid ${isSelected ? THEME_COLORS.text.primary : THEME_COLORS.surface}`, 
                   borderRadius: '8px', 
                   padding: '8px 0', 
                   textAlign: 'center', 
@@ -150,19 +154,21 @@ const HistoryView = ({ logs, categories, goals, onDeleteLog, onUpdateLog, onDele
                   display: 'flex', 
                   flexDirection: 'column', 
                   gap: '2px',
-                  transition: 'background-color 0.2s ease'
+                  transition: 'background-color 0.2s ease',
+                  // 選択時の見た目を少し浮き上がらせる
+                  boxShadow: isSelected ? `0 0 8px ${THEME_COLORS.accentRed}80` : 'none'
                 }}
               >
                 <div style={{ 
                   fontSize: '14px', 
                   fontWeight: 'bold', 
-                  color: (isSelected || hours > 3 || isToday) ? THEME_COLORS.text.primary : THEME_COLORS.text.secondary 
+                  color: isDarkBackground ? '#FFFFFF' : (hours > 0 || isToday ? THEME_COLORS.text.primary : THEME_COLORS.text.secondary) 
                 }}>
                   {date.getDate()}
                 </div>
                 <div style={{ 
                   fontSize: '10px', 
-                  color: (isSelected || hours > 3) ? '#FFFFFF' : (hours > 0 ? THEME_COLORS.text.primary : THEME_COLORS.text.muted) 
+                  color: isDarkBackground ? '#FFFFFF' : (hours > 0 ? THEME_COLORS.text.primary : THEME_COLORS.text.muted) 
                 }}>
                   {hoursStr}h
                 </div>
