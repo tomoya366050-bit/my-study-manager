@@ -156,49 +156,64 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         }
       `}</style>
 
-      <ChicTypography variant="h2">学習サマリー</ChicTypography>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', marginBottom: '25px' }}>
-        <div><ChicTypography variant="label">今日</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(todayMin / 60).toFixed(1)}h</div></div>
-        <div><ChicTypography variant="label">今週</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(weekTotalSec / 3600).toFixed(1)}h</div></div>
-        <div><ChicTypography variant="label">今月</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(logs.filter(l=>safeGetDate(l.createdAt).getMonth()===now.getMonth()).reduce((acc,l)=>acc+l.duration,0)/3600).toFixed(1)}h</div></div>
-      </div>
+      {/* ★修正: 余白を削減 */}
+      <ChicTypography variant="h2" style={{ marginBottom: '15px' }}>学習サマリー</ChicTypography>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '15px' }}>
-        <ChicCard style={{ flex: 1.6, height: '260px' }} padding="15px">
-          <ChicTypography variant="caption" style={{ marginBottom: '15px', display: 'block', color: THEME_COLORS.text.secondary }}>週間推移 (日〜土)</ChicTypography>
-          <div style={{ width: '100%', height: '180px' }}>
+      {/* ★修正: 3つの数値を1つのカードにまとめて洗練させる */}
+      <ChicCard padding="12px" style={{ marginBottom: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center' }}>
+          <div>
+            <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '2px' }}>今日</ChicTypography>
+            <div style={{fontSize: '18px', fontWeight: 'bold', color: THEME_COLORS.text.primary}}>{(todayMin / 60).toFixed(1)}<span style={{ fontSize: '11px', fontWeight: 'normal', color: THEME_COLORS.text.muted, marginLeft: '2px' }}>h</span></div>
+          </div>
+          <div style={{ borderLeft: `1px solid ${THEME_COLORS.surface}`, borderRight: `1px solid ${THEME_COLORS.surface}` }}>
+            <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '2px' }}>今週</ChicTypography>
+            <div style={{fontSize: '18px', fontWeight: 'bold', color: THEME_COLORS.text.primary}}>{(weekTotalSec / 3600).toFixed(1)}<span style={{ fontSize: '11px', fontWeight: 'normal', color: THEME_COLORS.text.muted, marginLeft: '2px' }}>h</span></div>
+          </div>
+          <div>
+            <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '2px' }}>今月</ChicTypography>
+            <div style={{fontSize: '18px', fontWeight: 'bold', color: THEME_COLORS.text.primary}}>{(logs.filter(l=>safeGetDate(l.createdAt).getMonth()===now.getMonth()).reduce((acc,l)=>acc+l.duration,0)/3600).toFixed(1)}<span style={{ fontSize: '11px', fontWeight: 'normal', color: THEME_COLORS.text.muted, marginLeft: '2px' }}>h</span></div>
+          </div>
+        </div>
+      </ChicCard>
+
+      {/* ★修正: グラフのカード高さを210pxに縮小し、余白を削る */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+        <ChicCard style={{ flex: 1.6, height: '210px' }} padding="12px">
+          <ChicTypography variant="caption" style={{ marginBottom: '10px', display: 'block', color: THEME_COLORS.text.secondary }}>週間推移 (日〜土)</ChicTypography>
+          <div style={{ width: '100%', height: '145px' }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+              <BarChart data={weeklyData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
                 <XAxis dataKey="day" axisLine={false} tickLine={false} interval={0} tick={({ x, y, payload }) => ( 
                   <g transform={`translate(${x},${y})`}>
-                    <text x={0} y={0} dy={10} textAnchor="middle" fill={THEME_COLORS.text.secondary} fontSize={10} fontWeight="bold">{payload.value}</text>
-                    <text x={0} y={0} dy={24} textAnchor="middle" fill={THEME_COLORS.text.muted} fontSize={9}>{weeklyData.find(d => d.day === payload.value)?.dateLabel}</text>
+                    <text x={0} y={0} dy={10} textAnchor="middle" fill={THEME_COLORS.text.secondary} fontSize={9} fontWeight="bold">{payload.value}</text>
+                    <text x={0} y={0} dy={22} textAnchor="middle" fill={THEME_COLORS.text.muted} fontSize={8}>{weeklyData.find(d => d.day === payload.value)?.dateLabel}</text>
                   </g> 
                 )} />
-                <YAxis domain={[0, yAxisMax]} ticks={ticks} axisLine={false} tickLine={false} fontSize={10} tick={{ fill: THEME_COLORS.text.muted }} width={35} tickFormatter={(val) => val === 0 ? "0" : `${val / 60}h`} />
-                <Bar dataKey="minutes" radius={[3, 3, 0, 0]} barSize={16}>
+                <YAxis domain={[0, yAxisMax]} ticks={ticks} axisLine={false} tickLine={false} fontSize={9} tick={{ fill: THEME_COLORS.text.muted }} width={30} tickFormatter={(val) => val === 0 ? "0" : `${val / 60}h`} />
+                <Bar dataKey="minutes" radius={[3, 3, 0, 0]} barSize={14}>
                   {weeklyData.map((e, i) => <Cell key={i} fill={e.minutes > 0 ? THEME_COLORS.accentRed : THEME_COLORS.surface} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </ChicCard>
-        <ChicCard style={{ flex: 1, height: '260px', display: 'flex', flexDirection: 'column', alignItems: 'center' }} padding="15px">
+        <ChicCard style={{ flex: 1, height: '210px', display: 'flex', flexDirection: 'column', alignItems: 'center' }} padding="12px">
           <ChicTypography variant="caption" style={{ marginBottom: '5px', alignSelf: 'flex-start', color: THEME_COLORS.text.secondary }}>今週の比率</ChicTypography>
-          <div style={{ width: '100%', height: '100px' }}>
+          <div style={{ width: '100%', height: '90px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={35} stroke="none">
+                <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={32} stroke="none">
                   {pieData.map((e, i) => <Cell key={i} fill={e.fillColor} />)}
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div style={{ width: '100%', marginTop: '10px', overflowY: 'auto', flex: 1 }}>
+          <div style={{ width: '100%', marginTop: '5px', overflowY: 'auto', flex: 1 }}>
             {pieData.map((e, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: e.fillColor }} />
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: e.fillColor, flexShrink: 0 }} />
                 <span style={{ fontSize: '9px', color: THEME_COLORS.text.secondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</span>
               </div>
             ))}
@@ -206,23 +221,25 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         </ChicCard>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-        <ChicCard padding="15px" style={{ textAlign: 'center', backgroundColor: THEME_COLORS.background }}>
-          <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '5px' }}>今週の平均/日</ChicTypography>
-          <div style={{ fontSize: '22px', fontWeight: 'bold', color: THEME_COLORS.text.primary }}>
-            {Math.floor(weeklyAvgMin / 60)}<span style={{ fontSize: '12px', margin: '0 2px', fontWeight: 'normal', color: THEME_COLORS.text.muted }}>h</span>
-            {weeklyAvgMin % 60}<span style={{ fontSize: '12px', marginLeft: '2px', fontWeight: 'normal', color: THEME_COLORS.text.muted }}>m</span>
+      {/* ★修正: 平均・日数のカードの余白を詰める */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '15px' }}>
+        <ChicCard padding="12px" style={{ textAlign: 'center', backgroundColor: THEME_COLORS.background }}>
+          <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '4px' }}>今週の平均/日</ChicTypography>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: THEME_COLORS.text.primary }}>
+            {Math.floor(weeklyAvgMin / 60)}<span style={{ fontSize: '11px', margin: '0 2px', fontWeight: 'normal', color: THEME_COLORS.text.muted }}>h</span>
+            {weeklyAvgMin % 60}<span style={{ fontSize: '11px', marginLeft: '2px', fontWeight: 'normal', color: THEME_COLORS.text.muted }}>m</span>
           </div>
         </ChicCard>
-        <ChicCard padding="15px" style={{ textAlign: 'center', backgroundColor: THEME_COLORS.background }}>
-          <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '5px' }}>現在の継続日数</ChicTypography>
-          <div style={{ fontSize: '22px', fontWeight: 'bold', color: THEME_COLORS.text.primary }}>
-            {DateUtils.calculateStreak(logs)}<span style={{ fontSize: '12px', marginLeft: '4px', fontWeight: 'normal', color: THEME_COLORS.text.muted }}>日連続</span>
+        <ChicCard padding="12px" style={{ textAlign: 'center', backgroundColor: THEME_COLORS.background }}>
+          <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '4px' }}>現在の継続日数</ChicTypography>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: THEME_COLORS.text.primary }}>
+            {DateUtils.calculateStreak(logs)}<span style={{ fontSize: '11px', marginLeft: '4px', fontWeight: 'normal', color: THEME_COLORS.text.muted }}>日連続</span>
           </div>
         </ChicCard>
       </div>
 
-      <hr style={{ border: 'none', borderTop: `1px solid ${THEME_COLORS.surface}`, margin: '40px 0' }} />
+      {/* ★修正: 区切り線の上下余白を半減 */}
+      <hr style={{ border: 'none', borderTop: `1px solid ${THEME_COLORS.surface}`, margin: '20px 0' }} />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <ChicTypography variant="h2" style={{ margin: 0 }}>学習目標</ChicTypography>
