@@ -6,7 +6,7 @@ import ChicTypography from '../../common/ChicTypography';
 
 // ★追加：テーマカラーのインポート
 // ※ src/views/ToDo/ToDoView.jsx から見て src/styles/theme.js を参照
-import { THEME_COLORS } from '../../styles/theme';
+import { THEME_COLORS } from '../../../styles/theme';
 
 const TodoView = ({ todos, onAddTodo, onToggleTodo, onDeleteTodo }) => {
   const [newTodoText, setNewTodoText] = useState("");
