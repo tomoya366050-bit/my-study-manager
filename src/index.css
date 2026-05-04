@@ -54,6 +54,14 @@ body {
   margin: 0;
 }
 
+html, body {
+  /* 縦方向の引っ張り（バウンス効果）を無効化する */
+  overscroll-behavior-y: none;
+  
+  /* 念のため、裏側の背景色もアプリに合わせて黒にしておく */
+  background-color: #000; 
+}
+
 #root {
   width: 1126px;
   max-width: 100%;
