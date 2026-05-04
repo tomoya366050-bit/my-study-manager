@@ -6,7 +6,7 @@ import { collection, addDoc, query, where, onSnapshot, serverTimestamp, deleteDo
 import HomeView from './components/views/Home/HomeView';
 import RecordView from './components/views/Record/RecordView';
 import HistoryView from './components/views/History/HistoryView';
-import TodoView from './components/views/Todo/TodoView';
+import TodoView from './components/views/ToDo/ToDoView';
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 
