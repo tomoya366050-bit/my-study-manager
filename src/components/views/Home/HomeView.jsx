@@ -40,7 +40,12 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   });
 
   const weekTotalSec = currentWeekLogs.reduce((s, l) => s + l.duration, 0);
-  const weeklyAvgMin = Math.floor((weekTotalSec / 7) / 60); 
+
+  // ★修正箇所：今日が週の何日目かを取得して平均を算出 (日=1, 月=2, ... 土=7)
+  const daysPassed = now.getDay() + 1; 
+  const weeklyAvgMin = Math.floor((weekTotalSec / daysPassed) / 60); 
+
+  const monthSec = logs.filter(l => safeGetDate(l.createdAt).getMonth() === now.getMonth()).reduce((acc, l) => acc + l.duration, 0);
 
   const weeklyData = weekRange.map(date => {
     const dKey = DateUtils.getDateKey(date);
@@ -69,7 +74,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
     const goalStartDate = safeGetDate(goal.createdAt);
     goalStartDate.setHours(0, 0, 0, 0);
 
-    // カテゴリが削除されて logs から消えていても、この filter で正しく現在の合計が算出されます
     const goalLogs = logs.filter(log => goal.categoryIds.includes(log.categoryId) && safeGetDate(log.createdAt) >= goalStartDate);
     const currentSec = goalLogs.reduce((s, l) => s + l.duration, 0);
     const targetSec = goal.targetTime * 3600;
@@ -99,7 +103,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
           <div>
             <ChicTypography variant="h3" style={{ margin: 0, color: THEME_COLORS.text.primary }}>{goal.title}</ChicTypography>
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
-              {/* 削除されたカテゴリは categories.find で見つからないため、自動的に表示から消えます */}
               {goal.categoryIds.map(id => {
                 const cat = categories.find(c => c.id === id);
                 return cat ? (
@@ -152,7 +155,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', marginBottom: '25px' }}>
         <div><ChicTypography variant="label">今日</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(todayMin / 60).toFixed(1)}h</div></div>
         <div><ChicTypography variant="label">今週</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(weekTotalSec / 3600).toFixed(1)}h</div></div>
-        <div><ChicTypography variant="label">今月</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(logs.filter(l=>safeGetDate(l.createdAt).getMonth()===now.getMonth()).reduce((acc,l)=>acc+l.duration,0)/3600).toFixed(1)}h</div></div>
+        <div><ChicTypography variant="label">今月</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(monthSec / 3600).toFixed(1)}h</div></div>
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '15px' }}>
