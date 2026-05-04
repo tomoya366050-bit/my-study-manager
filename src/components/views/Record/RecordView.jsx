@@ -216,10 +216,11 @@ const RecordView = ({
             <DatePicker 
               selected={manualDate} 
               onChange={(date) => setManualDate(date)} 
+              onFocus={(e) => e.target.blur()}
               maxDate={new Date()} 
               locale="ja" 
               dateFormat="yyyy/MM/dd" 
-              customInput={<ChicInput style={{ marginBottom: 0 }} readOnly />} 
+              customInput={<ChicInput style={{ marginBottom: 0 }} readOnly inputMode="none" />} 
               popperPlacement="top-start" 
             />
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', margin: '20px 0' }}>

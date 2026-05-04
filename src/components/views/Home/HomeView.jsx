@@ -243,10 +243,11 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
               <DatePicker 
                 selected={newGoalDeadline} 
                 onChange={date => setNewGoalDeadline(date)} 
+                onFocus={(e) => e.target.blur()}
                 minDate={new Date()} 
                 dateFormat="yyyy/MM/dd" 
                 locale="ja" 
-                customInput={<ChicInput style={{marginBottom: 0}} readOnly />} 
+                customInput={<ChicInput style={{marginBottom: 0}} readOnly inputMode="none" />} 
               />
             </div>
           </div>
