@@ -255,6 +255,8 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
                 dateFormat="yyyy/MM/dd" 
                 locale="ja" 
                 fixedHeight
+                {/* ★修正: 右端に合わせる設定を追加 */}
+                popperPlacement="bottom-end" 
                 customInput={<ChicInput style={{marginBottom: 0}} readOnly inputMode="none" />} 
               />
             </div>
