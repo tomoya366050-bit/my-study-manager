@@ -29,7 +29,10 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   const now = DateUtils.getToday();
   const todayKey = DateUtils.getDateKey(now);
   
-  const safeGetDate = (timestamp) => timestamp && typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
+  const safeGetDate = (timestamp) => {
+    if (!timestamp) return new Date(); // 取得直後のnull対応
+    return timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  };
 
   // --- 学習統計計算 ---
   const todaySec = logs.filter(l => DateUtils.getDateKey(safeGetDate(l.createdAt)) === todayKey).reduce((s, l) => s + l.duration, 0);
@@ -37,18 +40,13 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
   const dailyProgressPercent = dailyGoalMin > 0 ? Math.min(Math.round((todayMin / dailyGoalMin) * 100), 100) : 0;
 
   const weekRange = DateUtils.getCurrentWeekRange();
-  const startOfWeek = weekRange[0];
-  const endOfWeek = new Date(weekRange[6]);
-  endOfWeek.setHours(23, 59, 59, 999);
-
   const currentWeekLogs = logs.filter(l => {
     const d = safeGetDate(l.createdAt);
-    return d >= startOfWeek && d <= endOfWeek;
+    return d >= weekRange[0] && d <= new Date(new Date(weekRange[6]).setHours(23,59,59,999));
   });
 
   const weekTotalSec = currentWeekLogs.reduce((s, l) => s + l.duration, 0);
   const weeklyAvgMin = Math.floor((weekTotalSec / 7) / 60); 
-  const monthSec = logs.filter(l => safeGetDate(l.createdAt).getMonth() === now.getMonth()).reduce((s, l) => s + l.duration, 0);
 
   // --- 棒グラフデータ ---
   const weeklyData = weekRange.map(date => {
@@ -74,9 +72,17 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
     fillColor: THEME_COLORS.charts[index % THEME_COLORS.charts.length]
   }));
 
-  // --- 学習目標レンダリング関数 ---
+  // --- 学習目標レンダリング ---
   const renderGoalCard = (goal) => {
-    const goalLogs = logs.filter(log => goal.categoryIds.includes(log.categoryId) && safeGetDate(log.createdAt) >= safeGetDate(goal.createdAt));
+    // 比較対象の日時を「目標作成日の00:00:00」に設定（不具合修正の鍵）
+    const goalStartDate = safeGetDate(goal.createdAt);
+    goalStartDate.setHours(0, 0, 0, 0);
+
+    const goalLogs = logs.filter(log => 
+      goal.categoryIds.includes(log.categoryId) && 
+      safeGetDate(log.createdAt) >= goalStartDate
+    );
+
     const currentSec = goalLogs.reduce((s, l) => s + l.duration, 0);
     const targetSec = goal.targetTime * 3600;
     const progressPercent = Math.min(Math.floor((currentSec / targetSec) * 100), 100);
@@ -99,7 +105,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
               {goal.categoryIds.map(id => (
                 <span key={id} style={{ fontSize: '10px', color: THEME_COLORS.text.muted, backgroundColor: THEME_COLORS.surface, padding: '2px 6px', borderRadius: '4px' }}>
-                  {categories.find(c => c.id === id)?.name}
+                  {categories.find(c => c.id === id)?.name || "不明"}
                 </span>
               ))}
             </div>
@@ -116,7 +122,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div style={{ fontSize: '11px', color: THEME_COLORS.text.muted }}>
             {goal.deadline && <div>期限: {DateUtils.formatTimestampToYMD(goal.deadline)} (残り {daysRemaining} 日)</div>}
-            <div>実績: {Math.floor(currentSec / 3600)}h / {goal.targetTime}h</div>
+            <div>実績: {(currentSec / 3600).toFixed(1)}h / {goal.targetTime}h</div>
           </div>
           {dailyQuotaText && (
             <div style={{ textAlign: 'right' }}>
@@ -142,7 +148,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', textAlign: 'center', marginBottom: '25px' }}>
         <div><ChicTypography variant="label">今日</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(todayMin / 60).toFixed(1)}h</div></div>
         <div><ChicTypography variant="label">今週</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(weekTotalSec / 3600).toFixed(1)}h</div></div>
-        <div><ChicTypography variant="label">今月</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(monthSec / 3600).toFixed(1)}h</div></div>
+        <div><ChicTypography variant="label">今月</ChicTypography><div style={{fontSize: '20px', fontWeight: 'bold'}}>{(logs.filter(l=>safeGetDate(l.createdAt).getMonth()===now.getMonth()).reduce((acc,l)=>acc+l.duration,0)/3600).toFixed(1)}h</div></div>
       </div>
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '15px' }}>

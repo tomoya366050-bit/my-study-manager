@@ -19,9 +19,9 @@ function App() {
   const [materials, setMaterials] = useState([]);
   const [logs, setLogs] = useState([]);
   const [todos, setTodos] = useState([]);
-  const [goals, setGoals] = useState([]); // 学習目標用
+  const [goals, setGoals] = useState([]); 
   const [dailyGoalMin, setDailyGoalMin] = useState(0); 
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState('record');
   const [activeMaterialId, setActiveMaterialId] = useState(null); 
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [addType, setAddType] = useState('category'); 
@@ -100,18 +100,12 @@ function App() {
     }
   };
 
-  const filteredLogs = logs.filter(log => {
-    if (categories.length === 0 && materials.length === 0) return true; 
-    return categories.some(c => c.id === log.categoryId) && materials.some(m => m.id === log.materialId);
-  });
-
   const handleSaveGoal = async (min) => {
     const val = parseInt(min) || 0;
     await setDoc(doc(db, "user_settings", user.uid), { dailyGoalMin: val }, { merge: true });
     setDailyGoalMin(val);
   };
 
-  // 学習目標の追加
   const handleAddLearningGoal = async (goalData) => {
     await addDoc(collection(db, "goals"), {
       ...goalData,
@@ -254,7 +248,7 @@ function App() {
             onReorderUpdate={handleReorderUpdate} 
           />
         )}
-        {activeTab === 'history' && <HistoryView logs={filteredLogs} categories={categories} goals={goals} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
+        {activeTab === 'history' && <HistoryView logs={logs} categories={categories} goals={goals} onDeleteLog={handleDeleteLog} onUpdateLog={handleUpdateLog} />}
         {activeTab === 'todo' && (
           <TodoView todos={todos} onAddTodo={(text) => {
             if (!ValidationUtils.isRequired(text)) return;
