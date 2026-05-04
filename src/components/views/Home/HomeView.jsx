@@ -169,7 +169,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
               <>
                 <div style={{ fontSize: '10px', color: THEME_COLORS.text.secondary }}>現在の累計実績</div>
                 <div style={{ fontSize: '18px', fontWeight: 'bold', color: THEME_COLORS.text.primary }}>
-                  {(currentSec / 3600).toFixed(1)}<span style={{ fontSize: '11px', color: THEME_COLORS.text.muted, fontWeight: 'normal', marginLeft: '3px' }}>/ {goal.targetTime}h</span>
+                  {(currentSec / 3600).toFixed(1)}<span style={{ fontSize: '11px', color: THEME_COLORS.text.primary, fontWeight: 'normal', marginLeft: '3px' }}>/ {goal.targetTime}h</span>
                 </div>
               </>
             )}
