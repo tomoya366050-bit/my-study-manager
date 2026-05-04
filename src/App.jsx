@@ -10,7 +10,7 @@ import TodoView from './components/views/Todo/TodoView';
 import Header from './components/layout/Header';
 import BottomNav from './components/layout/BottomNav';
 
-// ★追加：タイマー用ユーティリティ
+// ★追加：タイマー用ユーティリティー
 import { TimerUtils } from './utils/TimerUtils';
 
 function App() {
