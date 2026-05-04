@@ -4,17 +4,21 @@ import ChicInput from '../../common/ChicInput';
 import ChicButton from '../../common/ChicButton';
 import ChicTypography from '../../common/ChicTypography';
 
-// ★追加：テーマカラーのインポート
-// ※ src/views/ToDo/ToDoView.jsx から見て src/styles/theme.js を参照
+// テーマカラーのインポート
 import { THEME_COLORS } from '../../../styles/theme';
+// ★追加：バリデーションユーティリティのインポート
+import { ValidationUtils } from '../../../utils/ValidationUtils';
 
 const TodoView = ({ todos, onAddTodo, onToggleTodo, onDeleteTodo }) => {
   const [newTodoText, setNewTodoText] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!newTodoText.trim()) return;
-    onAddTodo(newTodoText);
+    // ★修正：ValidationUtils を使用して必須入力チェックを行う
+    if (!ValidationUtils.isRequired(newTodoText)) return;
+    
+    // 文字列の両端の空白を除去して登録
+    onAddTodo(newTodoText.trim());
     setNewTodoText("");
   };
 
@@ -43,11 +47,9 @@ const TodoView = ({ todos, onAddTodo, onToggleTodo, onDeleteTodo }) => {
             backgroundColor: THEME_COLORS.background, borderRadius: '12px', marginBottom: '10px', 
             border: `1px solid ${THEME_COLORS.surface}` 
           }}>
-            {/* ★修正：未完了時の丸アイコンの色を明るくし、完了時の緑は固定 */}
             <div onClick={() => onToggleTodo(t.id, !t.completed)} style={{ color: t.completed ? '#27ae60' : THEME_COLORS.text.secondary, cursor: 'pointer' }}>
               {t.completed ? <CheckCircle2 /> : <Circle />}
             </div>
-            {/* ★修正：テキストの色をテーマに準拠 */}
             <span style={{ 
               flex: 1, 
               textDecoration: t.completed ? 'line-through' : 'none', 
@@ -56,7 +58,6 @@ const TodoView = ({ todos, onAddTodo, onToggleTodo, onDeleteTodo }) => {
             }}>
               {t.text}
             </span>
-            {/* ★修正：ゴミ箱アイコンの色をテーマに準拠 */}
             <Trash2 
               size={18} 
               color={THEME_COLORS.text.secondary} 
@@ -69,6 +70,5 @@ const TodoView = ({ todos, onAddTodo, onToggleTodo, onDeleteTodo }) => {
     </div>
   );
 };
-
 
 export default TodoView;

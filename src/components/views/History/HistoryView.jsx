@@ -4,24 +4,25 @@ import ChicCard from '../../common/ChicCard';
 import ChicTypography from '../../common/ChicTypography';
 import ChicInput from '../../common/ChicInput';
 
-// ★追加：テーマカラーのインポート
+// ユーティリティとテーマのインポート
 import { THEME_COLORS } from '../../../styles/theme';
+import { DateUtils } from '../../../utils/DateUtils';
+import { ValidationUtils } from '../../../utils/ValidationUtils';
 
-// ★修正：ACCENT_RED を props から削除
 const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
   const [expandedCatId, setExpandedCatId] = useState(null);
   
   // カレンダー用ステート
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(DateUtils.getToday());
+  const [selectedDate, setSelectedDate] = useState(DateUtils.getToday());
 
   // 編集用ステート
   const [editingLogId, setEditingLogId] = useState(null);
   const [editHours, setEditHours] = useState("");
   const [editMinutes, setEditMinutes] = useState("");
 
-  // 日付の安全な取得
-  const safeGetDate = (timestamp) => timestamp ? timestamp.toDate() : new Date();
+  // FirestoreのTimestampをDateオブジェクトに安全に変換する内部ヘルパー
+  const safeGetDate = (timestamp) => timestamp && typeof timestamp.toDate === 'function' ? timestamp.toDate() : new Date(timestamp);
 
   // --- 1. カレンダーの生成ロジック ---
   const calendarDays = useMemo(() => {
@@ -36,9 +37,8 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
     return daysArray;
   }, [currentMonth]);
 
-  const isSameDay = (d1, d2) => {
-    return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-  };
+  // ★修正: DateUtils.getDateKey を使用して日付を比較
+  const isSameDay = (d1, d2) => DateUtils.getDateKey(d1) === DateUtils.getDateKey(d2);
 
   const getDayTotalHours = (date) => {
     if (!date) return 0;
@@ -70,11 +70,12 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
     });
   }, [categories, logs]);
 
-  // --- 3. 時間表示用ヘルパー ---
-  const formatTime = (totalSeconds, showDetail = false) => {
+  // --- 3. 時間表示用ヘルパー (UIの装飾を維持するためJSXを返す) ---
+  const formatTimeJSX = (totalSeconds, showDetail = false) => {
     const totalMinutes = totalSeconds / 60;
     const h = Math.floor(totalMinutes / 60);
     const m = Math.round(totalMinutes % 60);
+    
     if (h > 0) return (
       <span style={{ color: THEME_COLORS.accentRed, fontWeight: 'bold' }}>
         {h}<span style={{ fontSize: '10px', margin: '0 2px', fontWeight: 'normal', color: THEME_COLORS.text.muted }}>時間</span>
@@ -88,27 +89,27 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
     );
   };
 
-  const formatDateLabel = (timestamp) => {
-    const date = safeGetDate(timestamp);
-    const isManual = date.getHours() === 0 && date.getMinutes() === 0;
-    return isManual 
-      ? date.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' })
-      : date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-  };
-
-  // 編集処理
+  // 編集開始
   const startEdit = (log) => {
     setEditingLogId(log.id);
     setEditHours(Math.floor(log.duration / 3600).toString());
     setEditMinutes(Math.floor((log.duration % 3600) / 60).toString());
   };
 
+  // ★修正: ValidationUtils で数値の妥当性をチェック
   const handleSaveEdit = (logId) => {
-    // 保存時にもマイナス値が入らないようにガード
-    const h = Math.max(0, parseInt(editHours) || 0);
-    const m = Math.max(0, parseInt(editMinutes) || 0);
+    if (!ValidationUtils.isValidNumber(editHours) || !ValidationUtils.isValidNumber(editMinutes)) {
+      alert("時間を正しく入力してください");
+      return;
+    }
+    
+    const h = parseInt(editHours) || 0;
+    const m = parseInt(editMinutes) || 0;
     const totalSec = (h * 3600) + (m * 60);
-    if (totalSec > 0) { onUpdateLog(logId, totalSec); }
+    
+    if (totalSec > 0) { 
+      onUpdateLog(logId, totalSec); 
+    }
     setEditingLogId(null);
   };
 
@@ -122,13 +123,13 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
           <button onClick={nextMonth} style={{ background: 'none', border: 'none', color: THEME_COLORS.text.primary, cursor: 'pointer' }}><ChevronRight size={24} /></button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px' }}>
-          {['日', '月', '火', '水', '木', '金', '土'].map((day, i) => (
+          {DateUtils.weekLabels.map((day, i) => (
             <div key={day} style={{ textAlign: 'center', fontSize: '12px', color: i === 0 ? THEME_COLORS.accentRed : THEME_COLORS.text.secondary, fontWeight: 'bold' }}>{day}</div>
           ))}
           {calendarDays.map((date, index) => {
             if (!date) return <div key={`empty-${index}`} />;
             const isSelected = isSameDay(date, selectedDate);
-            const isToday = isSameDay(date, new Date());
+            const isToday = isSameDay(date, DateUtils.getToday());
             const hours = getDayTotalHours(date);
             return (
               <div key={index} onClick={() => setSelectedDate(date)} style={{ backgroundColor: isSelected ? THEME_COLORS.accentRed : (isToday ? THEME_COLORS.surface : THEME_COLORS.background), border: `1px solid ${isSelected ? THEME_COLORS.accentRed : THEME_COLORS.surface}`, borderRadius: '8px', padding: '8px 0', textAlign: 'center', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -155,7 +156,8 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, fontSize: '11px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{category?.name || "未分類"}</ChicTypography>
                     <ChicTypography variant="h3" style={{ margin: 0, fontSize: '16px', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: THEME_COLORS.text.primary }}>{log.materialName}</ChicTypography>
-                    <div style={{ fontSize: '10px', color: THEME_COLORS.text.muted, marginTop: '4px' }}>{formatDateLabel(log.createdAt)}</div>
+                    {/* ★修正: DateUtils.formatTimestampToYMD を使用 */}
+                    <div style={{ fontSize: '10px', color: THEME_COLORS.text.muted, marginTop: '4px' }}>{DateUtils.formatTimestampToYMD(log.createdAt)}</div>
                   </div>
 
                   {isEditing ? (
@@ -181,14 +183,13 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
                         <span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>m</span>
                       </div>
                       <div style={{ display: 'flex', gap: '8px', marginLeft: '4px' }}>
-                        {/* 保存・キャンセルのアイコンはセマンティックな色（緑/赤）を維持 */}
                         <Check size={20} color="#4ade80" onClick={() => handleSaveEdit(log.id)} style={{ cursor: 'pointer' }} />
                         <X size={20} color="#f87171" onClick={() => setEditingLogId(null)} style={{ cursor: 'pointer' }} />
                       </div>
                     </div>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexShrink: 0 }}>
-                      <div style={{ textAlign: 'right', minWidth: '70px' }}>{formatTime(log.duration, true)}</div>
+                      <div style={{ textAlign: 'right', minWidth: '70px' }}>{formatTimeJSX(log.duration, true)}</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <Edit2 size={14} color={THEME_COLORS.text.secondary} onClick={() => startEdit(log)} style={{ cursor: 'pointer' }} />
                         <Trash2 size={14} color={THEME_COLORS.text.secondary} onClick={() => onDeleteLog(log.id)} style={{ cursor: 'pointer' }} />
@@ -210,13 +211,13 @@ const HistoryView = ({ logs, categories, onDeleteLog, onUpdateLog }) => {
             <div key={cat.id}>
               <div onClick={() => setExpandedCatId(expandedCatId === cat.id ? null : cat.id)} style={{ backgroundColor: THEME_COLORS.background, border: `1px solid ${THEME_COLORS.surface}`, borderRadius: '12px', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}><BookOpen size={16} color={THEME_COLORS.accentRed} /><span style={{ fontSize: '15px', fontWeight: 'bold', color: THEME_COLORS.text.primary }}>{cat.name}</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}><div style={{ fontSize: '18px' }}>{formatTime(cat.totalSec)}</div>{expandedCatId === cat.id ? <ChevronUp size={18} color={THEME_COLORS.text.secondary} /> : <ChevronDown size={18} color={THEME_COLORS.text.secondary} />}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}><div style={{ fontSize: '18px' }}>{formatTimeJSX(cat.totalSec)}</div>{expandedCatId === cat.id ? <ChevronUp size={18} color={THEME_COLORS.text.secondary} /> : <ChevronDown size={18} color={THEME_COLORS.text.secondary} />}</div>
               </div>
               {expandedCatId === cat.id && (
                 <div style={{ backgroundColor: THEME_COLORS.background, margin: '0 10px', padding: '10px 20px', borderRadius: '0 0 12px 12px', border: `1px solid ${THEME_COLORS.surface}`, borderTop: 'none' }}>
                   {cat.materials.length === 0 ? <div style={{ fontSize: '12px', color: THEME_COLORS.text.muted, padding: '5px 0' }}>記録がありません</div> : cat.materials.map((mat, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i === cat.materials.length - 1 ? 'none' : `1px solid ${THEME_COLORS.surface}` }}>
-                      <span style={{ fontSize: '13px', color: THEME_COLORS.text.secondary }}>{mat.name}</span><span style={{ fontSize: '13px', color: THEME_COLORS.text.primary }}>{formatTime(mat.duration, true)}</span>
+                      <span style={{ fontSize: '13px', color: THEME_COLORS.text.secondary }}>{mat.name}</span><span style={{ fontSize: '13px', color: THEME_COLORS.text.primary }}>{formatTimeJSX(mat.duration, true)}</span>
                     </div>
                   ))}
                 </div>

@@ -12,6 +12,9 @@ import ChicSelect from '../../common/ChicSelect';
 import ChicTypography from '../../common/ChicTypography';
 
 import { THEME_COLORS } from '../../../styles/theme';
+// ユーティリティのインポート
+import { DateUtils } from '../../../utils/DateUtils';
+import { ValidationUtils } from '../../../utils/ValidationUtils';
 
 const RecordView = ({ 
   categories, materials, activeMaterialId, isManagementMode, 
@@ -127,8 +130,8 @@ const RecordView = ({
                             <ChicInput value={editingMaterialName} onChange={e => setEditingMaterialName(e.target.value)} style={{ padding: '5px', fontSize: '11px' }} autoFocus />
                             <div style={{display:'flex', gap:'3px'}}>
                               <ChicButton onClick={() => { 
-                                // ★修正：教材名のインライン編集時の空文字ガード
-                                if (!editingMaterialName.trim()) return;
+                                // ValidationUtils を適用
+                                if (!ValidationUtils.isRequired(editingMaterialName)) return;
                                 onUpdateMaterial(mat.id, editingMaterialName); 
                                 setEditingMaterialId(null); 
                               }} style={{ padding:'4px' }}>
@@ -157,6 +160,49 @@ const RecordView = ({
 
   const activeCategories = categories.filter(c => c.status !== 'completed');
   const completedCategories = categories.filter(c => c.status === 'completed');
+
+  // タイマー表示用の条件付きレンダリング
+  if (activeMaterialId) {
+    const material = materials.find(m => m.id === activeMaterialId);
+    const category = categories.find(c => c.id === material?.categoryId);
+
+    return (
+      <div key="timer">
+        <button onClick={handleBackWithConfirmation} style={{ background: 'none', border: 'none', color: THEME_COLORS.text.secondary, display: 'flex', alignItems: 'center', marginBottom: '20px', cursor: 'pointer' }}><ArrowLeft size={18} style={{ marginRight: '4px' }} /> 戻る</button>
+        <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+          <ChicTypography variant="caption" style={{ color: THEME_COLORS.text.secondary, display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+            {category?.name || "カテゴリなし"}
+          </ChicTypography>
+          <ChicTypography variant="h2" style={{ color: THEME_COLORS.accentRed, margin: 0 }}>{material?.name}</ChicTypography>
+        </div>
+        <div style={{ fontSize: '5rem', textAlign: 'center', margin: '40px 0', fontFamily: 'monospace', fontWeight: '100', color: THEME_COLORS.text.primary }}>
+          {/* DateUtils を適用 */}
+          {DateUtils.formatSecondsToHMS(seconds)}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', marginBottom: '60px' }}>
+          <button onClick={() => setIsRunning(!isRunning)} style={{ width: '80px', height: '80px', borderRadius: '50%', border: `1px solid ${THEME_COLORS.surface}`, backgroundColor: isRunning ? THEME_COLORS.surface : THEME_COLORS.accentRed, color: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>{isRunning ? <Pause size={30}/> : <Play size={30}/>}</button>
+          <button onClick={() => onSaveLog(material)} style={{ width: '80px', height: '80px', borderRadius: '50%', border: `1px solid ${THEME_COLORS.surface}`, backgroundColor: THEME_COLORS.background, color: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center' }}><Save size={30}/></button>
+        </div>
+        <div style={{ borderTop: `1px solid ${THEME_COLORS.surface}`, paddingTop: '30px' }}>
+          <ChicTypography variant="h3" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: THEME_COLORS.text.primary }}><CalendarIcon size={14}/> 手動で記録を追加</ChicTypography>
+          <ChicCard padding="20px">
+            <DatePicker selected={manualDate} onChange={(date) => setManualDate(date)} maxDate={new Date()} locale="ja" dateFormat="yyyy/MM/dd" customInput={<ChicInput style={{ marginBottom: 0 }} />} popperPlacement="top-start" />
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center', margin: '20px 0' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}><ChicInput type="number" placeholder="0" value={manualHours} onChange={e => setManualHours(e.target.value)} style={{ marginBottom: 0 }} /><span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>時</span></div>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}><ChicInput type="number" placeholder="0" value={manualMinutes} onChange={e => setManualMinutes(e.target.value)} style={{ marginBottom: 0 }} /><span style={{ fontSize: '12px', color: THEME_COLORS.text.secondary }}>分</span></div>
+            </div>
+            {errorMessage && <p style={{ color: THEME_COLORS.accentRed, fontSize: '12px', marginBottom: '15px', textAlign: 'center' }}>{errorMessage}</p>}
+            <ChicButton onClick={() => {
+              const h = parseInt(manualHours) || 0; const m = parseInt(manualMinutes) || 0; const totalSec = (h * 3600) + (m * 60);
+              // ValidationUtils の概念に基づきガード（簡易実装）
+              if (totalSec <= 0 || totalSec > 86400) { setErrorMessage("時間を正しく入力してください"); return; }
+              onSaveManualLog(material, manualDate, totalSec); setManualHours(""); setManualMinutes(""); setErrorMessage("");
+            }} style={{ width: '100%' }}>手動記録を保存</ChicButton>
+          </ChicCard>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div key="record-list">
@@ -235,11 +281,13 @@ const RecordView = ({
             <div style={{ display: 'flex', gap: '10px' }}>
               <ChicButton onClick={() => { 
                 if(addType === 'category'){ 
-                  if(!newCategoryName.trim()) return;
+                  // ValidationUtils を適用
+                  if(!ValidationUtils.isRequired(newCategoryName)) return;
                   onAddCategory(newCategoryName); 
                   setNewCategoryName(""); 
                 } else { 
-                  if(!newMaterialName.trim() || !selectedCategoryId) return;
+                  // ValidationUtils を適用
+                  if(!ValidationUtils.isRequired(newMaterialName) || !selectedCategoryId) return;
                   onAddMaterial(newMaterialName, selectedCategoryId); 
                   setNewMaterialName("");
                   setSelectedCategoryId("");
@@ -284,8 +332,8 @@ const RecordView = ({
             
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               <ChicButton onClick={() => { 
-                // ★修正：カテゴリ名の編集（ポップアップ）時の空文字ガード
-                if (!editingCategory.name.trim()) return;
+                // ValidationUtils を適用
+                if (!ValidationUtils.isRequired(editingCategory.name)) return;
                 onUpdateCategory(editingCategory.id, editingCategory.name, editingCategory.status); 
                 setEditingCategory(null); 
               }} style={{ flex: 1 }}>

@@ -2,18 +2,10 @@
 
 export const ValidationUtils = {
   /**
-   * 必須入力チェック（空白文字のみもNG）
+   * 必須入力チェック
    */
   isRequired: (value) => {
     return value !== null && value !== undefined && value.trim().length > 0;
-  },
-
-  /**
-   * 文字数制限チェック
-   */
-  isMaxLength: (value, max) => {
-    if (!value) return true;
-    return value.length <= max;
   },
 
   /**
@@ -25,12 +17,10 @@ export const ValidationUtils = {
   },
 
   /**
-   * 未来の日付でないかチェック
+   * 文字数制限（例：カテゴリ名が長すぎると表示が崩れるため）
    */
-  isNotFutureDate: (date) => {
-    if (!date) return true;
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    return new Date(date) <= today;
+  isMaxLength: (value, max) => {
+    if (!value) return true;
+    return value.length <= max;
   }
 };
