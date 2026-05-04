@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, PieChart, Pie, CartesianGrid } from 'recharts';
 import { Plus, Check, X, Trash2 } from 'lucide-react';
-import DatePicker, { registerLocale } from "react-datepicker"; // ★追加
-import ja from 'date-fns/locale/ja'; // ★追加
+import DatePicker, { registerLocale } from "react-datepicker";
+import ja from 'date-fns/locale/ja';
 import "react-datepicker/dist/react-datepicker.css";
 import { Timestamp } from 'firebase/firestore'; 
 
@@ -15,7 +15,6 @@ import { THEME_COLORS } from '../../../styles/theme';
 import { DateUtils } from '../../../utils/DateUtils';
 import { ValidationUtils } from '../../../utils/ValidationUtils';
 
-// ★日本語ロケールの登録
 registerLocale('ja', ja);
 
 const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGoalStatus }) => {
@@ -241,14 +240,14 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
             </div>
             <div style={{ flex: 1 }}>
               <ChicTypography variant="label">期限 (任意)</ChicTypography>
-              {/* ★修正: locale="ja" を追加 */}
               <DatePicker 
                 selected={newGoalDeadline} 
                 onChange={date => setNewGoalDeadline(date)} 
                 minDate={new Date()} 
                 dateFormat="yyyy/MM/dd" 
                 locale="ja" 
-                customInput={<ChicInput style={{marginBottom: 0}} />} 
+                {/* ★修正: readOnly を追加してキーボード起動を防止 */}
+                customInput={<ChicInput style={{marginBottom: 0}} readOnly />} 
               />
             </div>
           </div>

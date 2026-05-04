@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
-import DatePicker, { registerLocale } from "react-datepicker"; // ★追加
-import ja from 'date-fns/locale/ja'; // ★追加
+import DatePicker, { registerLocale } from "react-datepicker";
+import ja from 'date-fns/locale/ja';
 import "react-datepicker/dist/react-datepicker.css";
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Timer, Plus, Settings2, Check, X, Bookmark, Edit2, Trash2, ArrowLeft, Pause, Play, Save, Calendar as CalendarIcon, ArrowUpDown, GripVertical, ChevronDown, ChevronUp, CheckCircle2, RotateCcw } from 'lucide-react';
@@ -15,7 +15,6 @@ import { THEME_COLORS } from '../../../styles/theme';
 import { DateUtils } from '../../../utils/DateUtils';
 import { ValidationUtils } from '../../../utils/ValidationUtils';
 
-// ★日本語ロケールの登録
 registerLocale('ja', ja);
 
 const RecordView = ({ 
@@ -214,14 +213,14 @@ const RecordView = ({
         <div style={{ borderTop: `1px solid ${THEME_COLORS.surface}`, paddingTop: '30px' }}>
           <ChicTypography variant="h3" style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px', color: THEME_COLORS.text.primary }}><CalendarIcon size={14}/> 手動で追加</ChicTypography>
           <ChicCard padding="20px">
-            {/* ★修正: locale="ja" を追加 */}
             <DatePicker 
               selected={manualDate} 
               onChange={(date) => setManualDate(date)} 
               maxDate={new Date()} 
               locale="ja" 
               dateFormat="yyyy/MM/dd" 
-              customInput={<ChicInput style={{ marginBottom: 0 }} />} 
+              {/* ★修正: readOnly を追加してキーボード起動を防止 */}
+              customInput={<ChicInput style={{ marginBottom: 0 }} readOnly />} 
               popperPlacement="top-start" 
             />
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center', margin: '20px 0' }}>
