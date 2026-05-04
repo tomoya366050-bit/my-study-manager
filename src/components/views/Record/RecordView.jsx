@@ -196,7 +196,6 @@ const RecordView = ({
 
     return (
       <div key="timer">
-        {/* ★追加: カレンダーの「他の月の日付」を見えなくし、クリックできなくするCSS */}
         <style>{`
           .react-datepicker__day--outside-month {
             visibility: hidden !important;
@@ -228,6 +227,7 @@ const RecordView = ({
               maxDate={new Date()} 
               locale="ja" 
               dateFormat="yyyy/MM/dd" 
+              fixedHeight
               customInput={<ChicInput style={{ marginBottom: 0 }} readOnly inputMode="none" />} 
               popperPlacement="top-start" 
             />

@@ -149,7 +149,6 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
 
   return (
     <div key="home">
-      {/* ★追加: カレンダーの「他の月の日付」を見えなくし、クリックできなくするCSS */}
       <style>{`
         .react-datepicker__day--outside-month {
           visibility: hidden !important;
@@ -255,6 +254,7 @@ const HomeView = ({ logs, categories, goals, onAddGoal, onDeleteGoal, onUpdateGo
                 minDate={new Date()} 
                 dateFormat="yyyy/MM/dd" 
                 locale="ja" 
+                fixedHeight
                 customInput={<ChicInput style={{marginBottom: 0}} readOnly inputMode="none" />} 
               />
             </div>
